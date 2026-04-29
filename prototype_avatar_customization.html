@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI讲师形象个性化定制工作台</title>
+    
+
+    <script id="core-routing">
+        (function() {
+            const adminPages = ['prototype_digital_human_modeling.html', 'prototype_courseware_agent.html', 'prototype_digital_classroom.html', 'prototype_course_review.html', 'prototype_system_management.html'];
+            const currentPage = window.location.pathname.split('/').pop() || 'prototype_interactive_classroom.html';
+            let currentRole = localStorage.getItem('currentRole') || 'student';
+            
+            // Security redirect immediately
+            if (currentRole === 'student' && adminPages.some(p => currentPage.includes(p))) {
+                window.location.href = 'prototype_interactive_classroom.html';
+                return;
+            }
+            
+            document.documentElement.setAttribute('data-role', currentRole);
+
+            window.navTo = function(page, hash) {
+                if (adminPages.some(p => page.includes(p))) {
+                    localStorage.setItem('currentRole', 'admin');
+                } else if (page.includes('prototype_interactive_classroom.html') && hash === 'page-path-config') {
+                    localStorage.setItem('currentRole', 'admin');
+                }
+                window.location.href = page + (hash ? '#' + hash : '');
+            };
+
+            function updateAvatarUI(role) {
+                const roleName = document.getElementById('role-name');
+                const roleAvatar = document.getElementById('role-avatar');
+                if(roleName && roleAvatar) {
+                    if(role === 'student') {
+                        roleName.textContent = '营业员 (学员端)';
+                        roleAvatar.textContent = '营';
+                        roleAvatar.className = 'w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shadow-sm';
+                    } else {
+                        roleName.textContent = '系统管理员 (管理端)';
+                        roleAvatar.textContent = '管';
+                        roleAvatar.className = 'w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold shadow-sm';
+                    }
+                }
+            }
+
+            window.switchRole = function(newRole) {
+                localStorage.setItem('currentRole', newRole);
+                document.documentElement.setAttribute('data-role', newRole);
+                updateAvatarUI(newRole);
+                
+                if (newRole === 'student' && adminPages.some(p => currentPage.includes(p))) {
+                    window.location.href = 'prototype_interactive_classroom.html';
+                } else {
+                    syncPageAndMenu();
+                }
+            };
+
+            window.toggleMenu = function(element) {
+                element.closest('.menu-group').classList.toggle('open');
+            };
+
+            window.syncPageAndMenu = function() {
+                const hash = window.location.hash.substring(1);
+                const role = localStorage.getItem('currentRole') || 'student';
+                
+                let activePageId = hash;
+                if (!activePageId) {
+                    if (currentPage.includes('modeling')) activePageId = 'page-modeling';
+                    if (currentPage.includes('courseware')) activePageId = 'page-outline';
+                    if (currentPage.includes('digital_classroom')) activePageId = 'page-video-editor';
+                    if (currentPage.includes('course_review')) activePageId = 'page-review';
+                if (currentPage.includes('system_management')) activePageId = 'page-user-management';
+                    if (currentPage.includes('interactive_classroom')) {
+                        activePageId = role === 'admin' ? 'page-path-config' : 'page-dashboard';
+                    }
+                    if (currentPage.includes('ai_companion')) activePageId = 'page-ai-companion';
+                }
+                
+                if (activePageId) {
+                    document.querySelectorAll('main.page-view').forEach(el => {
+                        el.style.display = 'none';
+                        el.classList.remove('active');
+                    });
+                    const target = document.getElementById(activePageId);
+                    if (target) {
+                        target.style.display = 'flex';
+                        target.classList.add('active');
+                    }
+                }
+
+                document.querySelectorAll('.sub-menu-item').forEach(el => {
+                    el.classList.remove('active');
+                    const onclickStr = el.getAttribute('onclick') || '';
+                    if (activePageId && onclickStr.includes(activePageId)) {
+                        el.classList.add('active');
+                        const group = el.closest('.menu-group');
+                        if (group) group.classList.add('open');
+                    }
+                });
+            };
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const role = localStorage.getItem('currentRole') || 'student';
+                document.documentElement.setAttribute('data-role', role);
+                updateAvatarUI(role);
+                syncPageAndMenu();
+            });
+
+            window.addEventListener('hashchange', syncPageAndMenu);
+        })();
+    </script>
+
+</body>
+</html>

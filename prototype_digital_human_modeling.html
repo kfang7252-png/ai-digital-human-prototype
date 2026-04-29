@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D AI数字人制作及运营系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --sidebar-bg: #ffffff;
+            --sidebar-active-bg: #eef2ff;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* --- Sidebar --- */
+        .sidebar-nav {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.02);
+            z-index: 10;
+        }
+
+        .menu-list { list-style: none; padding: 0; margin: 0; width: 100%; }
+        .menu-group { border-bottom: 1px solid transparent; }
+        
+        .menu-title {
+            display: flex; align-items: center; padding: 14px 20px; cursor: pointer;
+            color: #334155; font-weight: 500; transition: all 0.2s ease; user-select: none;
+        }
+        .menu-title:hover { color: var(--primary); background-color: #f8fafc; }
+        .menu-title .icon { width: 18px; height: 18px; margin-right: 10px; flex-shrink: 0; }
+        .menu-title .chevron { width: 14px; height: 14px; margin-left: auto; color: #94a3b8; transition: transform 0.3s; }
+        .menu-group.open .menu-title .chevron { transform: rotate(180deg); }
+        .menu-group.open .menu-title { color: var(--primary); }
+
+        .sub-menu-list {
+            max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1); background-color: #fafafa;
+        }
+        .menu-group.open .sub-menu-list { max-height: 300px; }
+
+        .sub-menu-item {
+            padding: 10px 20px 10px 48px; font-size: 13px; color: var(--text-muted); cursor: pointer;
+            display: flex; align-items: center; transition: all 0.2s; border-right: 3px solid transparent;
+        }
+        .sub-menu-item:hover { color: var(--primary); }
+        .sub-menu-item.active {
+            background-color: var(--sidebar-active-bg); color: var(--primary); font-weight: 600;
+        }
+        
+        .badge-dev {
+            font-size: 10px; font-weight: normal; background-color: var(--sidebar-active-bg); color: #94a3b8;
+            padding: 2px 6px; border-radius: 10px; border: 1px solid #e2e8f0; margin-left: 8px; flex-shrink: 0;
+        }
+
+        /* --- Main Content --- */
+        .page-view { display: none !important; height: 100%; }
+        .page-view.active { display: flex !important; animation: fadeIn 0.3s ease; }
+
+        .tab-btn {
+            padding: 12px 24px; font-weight: 500; color: var(--text-muted); border-bottom: 2px solid transparent;
+            transition: all 0.2s; cursor: pointer;
+        }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .upload-area {
+            border: 2px dashed #cbd5e1; background-color: var(--sidebar-active-bg); border-radius: 8px;
+            transition: all 0.2s; cursor: pointer;
+        }
+        .upload-area:hover { border-color: var(--primary); background-color: #f0f9ff; }
+
+        .asset-card {
+            border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;
+            overflow: hidden; transition: all 0.2s; position: relative;
+        }
+        .asset-card:hover { border-color: #93c5fd; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .asset-card.selected { border-color: var(--primary); ring: 2px solid var(--primary); background-color: #f0f9ff; }
+
+        .btn-primary {
+            background-color: var(--primary); color: white; border-radius: 6px;
+            padding: 8px 16px; font-weight: 500; transition: background-color 0.2s; cursor: pointer;
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-outline {
+            border: 1px solid var(--border-color); background: white; color: var(--text-main);
+            border-radius: 6px; padding: 8px 16px; font-weight: 500; transition: all 0.2s; cursor: pointer;
+        }
+        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .stage-container { background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%); position: relative; }
+        .model-preview { filter: drop-shadow(0 20px 13px rgba(0, 0, 0, 0.15)); }
+
+        /* Notification Toast */
+        #toast {
+            position: fixed; top: 20px; right: 20px; z-index: 100;
+            background: white; border-left: 4px solid #10b981; border-radius: 4px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 16px; display: none;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #toast.show { display: block; transform: translateX(0); animation: slideIn 0.3s forwards; }
+        @keyframes slideIn { to { transform: translateX(0); } }
+
+        /* Modal (Dialog) */
+        .modal-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50;
+            display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px);
+        }
+        .modal-backdrop.active { display: flex; animation: fadeIn 0.2s; }
+        .modal-content {
+            background: white; border-radius: 8px; width: 400px; max-width: 90vw;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden;
+            transform: scale(0.95); transition: transform 0.2s;
+        }
+        .modal-backdrop.active .modal-content { transform: scale(1); }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center relative z-[100] shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-500 rounded flex items-center justify-center text-white font-bold shadow-sm">AI</div>
+            <h1 class="text-lg font-bold text-gray-800">数智培训中心</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="text-gray-500 hover:text-blue-600 relative">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            <div class="relative group">
+                <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 py-1 px-2 rounded" id="role-selector-btn">
+                    <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm" id="role-avatar">营</div>
+                    <span class="text-sm font-medium text-gray-700" id="role-name">营业员</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <!-- Role Dropdown -->
+                <div class="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 hidden group-hover:block z-[999]">
+                    <div class="px-4 py-2 border-b border-gray-100">
+                        <p class="text-xs text-gray-500 font-medium">切换角色视图</p>
+                    </div>
+                    <div class="px-2 py-1 cursor-pointer hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2" onclick="switchRole('student')">
+                        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">营</div>
+                        营业员 (学员端)
+                    </div>
+                    <div class="px-2 py-1 cursor-pointer hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2" onclick="switchRole('admin')">
+                        <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">管</div>
+                        系统管理员 (管理端)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 z-10 shadow-sm overflow-y-auto">
+            <div class="p-4">
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">系统业务模块导航</div>
+            </div>
+            
+            <ul class="menu-list" id="main-sidebar">
+                <!-- Group 1 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        <span class="text-[14px]">数字人形象定制</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="switchPage('page-modeling', this)">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                            数字人建模
+                        </div>
+                        <div class="sub-menu-item" onclick="switchPage('page-customization', this)">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                            数字讲师形象定制
+                        </div>
+                        <div class="sub-menu-item" onclick="switchPage('page-assets', this)">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            讲师资产库
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Group 2 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span class="text-[14px]">培训课件智能体</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_courseware_agent.html#page-outline'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                            PPT大纲智能生成
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_courseware_agent.html#page-ppt'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            PPT智能生成
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_courseware_agent.html#page-ppt-library'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            PPT课件资源库
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Group 3 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span class="text-[14px]">数字讲师课堂</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_digital_classroom.html#page-video-editor'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            视频课堂制作
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_digital_classroom.html#page-video-library'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            视频课程资源库
+                        </div>
+                    </div>
+                </li>
+                
+                <!-- Group 4 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span class="text-[14px]">课堂审核及发布</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_course_review.html#page-review'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                            内容审核
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_course_review.html#page-publish'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                            发布管理
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Group 5 (Active) -->
+                <li class="menu-group">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span class="text-[14px]">交互式培训课堂</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_interactive_classroom.html#page-dashboard'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            学习进度看板
+                        </div>
+                        <div class="sub-menu-item student-only" style="display: none;" onclick="window.location.href='prototype_interactive_classroom.html#page-progress'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            专属学习路径
+                        </div>
+                        <div class="sub-menu-item admin-only" style="display: none;" onclick="window.location.href='prototype_interactive_classroom.html#page-path-config'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            学习路径配置
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Group 6 -->
+                <li class="menu-group">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <span class="text-[14px]">AI伴学智能体</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_ai_companion.html#page-ai-companion'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                            智能伴学助手
+                        </div>
+                    </div>
+                </li>
+            
+                <!-- Group 7 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span class="text-[14px]">系统设置</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_system_management.html#page-user-management'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                            用户管理
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_system_management.html#page-role-management'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                            角色管理
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- --- PAGE 1: 数字人建模 (MODELING) --- -->
+        <main id="page-modeling" class="page-view active flex-1 flex overflow-hidden bg-slate-50 p-6 gap-6">
+            
+            <!-- Left Column: Controls -->
+            <div class="w-[55%] flex flex-col gap-6 h-full">
+                
+                <div class="panel flex-1 flex flex-col overflow-hidden">
+                    <div class="px-5 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                        <h2 class="font-bold text-gray-800">数字人建模</h2>
+                        <button class="btn-primary text-xs py-1 px-3" onclick="openSaveModal('base')">保存基础模型入库</button>
+                    </div>
+                    
+                    <div class="flex border-b border-gray-200 px-2">
+                        <div class="tab-btn active text-sm" onclick="switchTab('modeling', 'clone')">真人形象克隆</div>
+                        <div class="tab-btn text-sm" onclick="switchTab('modeling', '3d')">3D数字人底模调用</div>
+                    </div>
+
+                    <div class="p-5 overflow-y-auto flex-1 bg-white">
+                        
+                        <!-- 真人形象克隆 Content -->
+                        <div id="modeling-clone" class="tab-content active space-y-4">
+                            <p class="text-xs text-gray-500 leading-relaxed">基于一段5分钟视频，通过图像识别、语音合成、肢体动作合成等技术1:1复刻数字人模型。</p>
+                            
+                            <div class="upload-area p-8 flex flex-col items-center justify-center text-center" onclick="simulateUpload()">
+                                <svg class="w-12 h-12 text-blue-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                <h3 class="text-sm font-medium text-gray-700 mb-1">点击上传或拖拽真人视频素材</h3>
+                                <p class="text-xs text-gray-400 mb-4">支持 MP4, MOV 格式 (建议5分钟时长)</p>
+                                <button class="px-4 py-1.5 border border-blue-500 text-blue-500 rounded text-xs hover:bg-blue-50 transition">选择视频</button>
+                            </div>
+                            
+                            <!-- Progress simulation -->
+                            <div id="upload-progress" class="bg-gray-50 p-4 rounded border border-gray-200" style="display: none;">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-gray-600">模型训练与特征解析进度</span>
+                                    <span class="text-blue-600 font-medium">100%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                    <div class="bg-blue-500 h-1.5 rounded-full" style="width: 100%"></div>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-2">状态: <span class="text-green-500">已完成 1:1 数字化还原入库，右侧可预览</span></p>
+                            </div>
+                        </div>
+
+                        <!-- 3D数字人底模调用 Content -->
+                        <div id="modeling-3d" class="tab-content space-y-6">
+                            <p class="text-xs text-gray-500 leading-relaxed">提供无需拍摄的纯3D虚拟数字人底模资产直接调用，规避肖像权纠纷，满足多场景免录课诉求。</p>
+                            
+                            <!-- Category: 3D Real -->
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-700 mb-3 border-l-2 border-blue-500 pl-2">3D真人模型</h4>
+                                <div class="grid grid-cols-4 gap-4">
+                                    <div class="asset-card selected p-3 text-center" onclick="changeBasePreview('3D真人-男1')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D1&backgroundColor=f8fafc" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D真人-男1</span>
+                                    </div>
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D真人-男2')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D3&backgroundColor=f8fafc&facialHair=beardLight" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D真人-男2</span>
+                                    </div>
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D真人-女1')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D2&backgroundColor=f8fafc&clothing=shirtScoopNeck" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D真人-女1</span>
+                                    </div>
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D真人-女2')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D4&backgroundColor=f8fafc&top=longHairStraight" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D真人-女2</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Category: 3D Cartoon -->
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-700 mb-3 border-l-2 border-blue-500 pl-2">3D卡通模型</h4>
+                                <div class="grid grid-cols-4 gap-4">
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D卡通-男1')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Cartoon3D1&backgroundColor=f8fafc&style=circle" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D卡通-男1</span>
+                                    </div>
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D卡通-男2')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Cartoon3D3&backgroundColor=f8fafc&style=circle&top=shortHairShortWaved" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D卡通-男2</span>
+                                    </div>
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D卡通-女1')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Cartoon3D2&backgroundColor=f8fafc&style=circle" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D卡通-女1</span>
+                                    </div>
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D卡通-女2')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Cartoon3D4&backgroundColor=f8fafc&style=circle&top=longHairCurly" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D卡通-女2</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Category: 3D Anime -->
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-700 mb-3 border-l-2 border-blue-500 pl-2">3D二次元模型</h4>
+                                <div class="grid grid-cols-4 gap-4">
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D二次元-男1')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Anime3D3&backgroundColor=f8fafc&top=shortHairTheCaesar" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D二次元-男1</span>
+                                    </div>
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D二次元-男2')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Anime3D4&backgroundColor=f8fafc&top=shortHairDreads01" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D二次元-男2</span>
+                                    </div>
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D二次元-女1')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Anime3D1&backgroundColor=f8fafc&eyes=hearts" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D二次元-女1</span>
+                                    </div>
+                                    <div class="asset-card p-3 text-center" onclick="changeBasePreview('3D二次元-女2')">
+                                        <div class="aspect-square bg-gray-100 rounded mb-2 overflow-hidden border border-gray-200">
+                                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Anime3D2&backgroundColor=f8fafc&eyes=wink" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs text-gray-700 font-medium">3D二次元-女2</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Visual Preview Canvas (Base Model) -->
+            <div class="w-[45%] panel overflow-hidden flex flex-col">
+                <div class="px-5 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                    <h2 class="font-bold text-gray-800">基础底模预览 (Base Model)</h2>
+                    <div class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded border border-gray-200">未应用任何装扮</div>
+                </div>
+                
+                <div class="flex-1 stage-container flex items-center justify-center relative">
+                    <img id="base-model-preview" src="https://api.dicebear.com/7.x/avataaars/svg?seed=BlankModel&backgroundColor=transparent&clothing=overall" alt="Base Avatar" class="w-[250px] h-auto model-preview z-10 transition-all duration-300 opacity-50 grayscale">
+                    <div class="absolute w-[200px] h-[20px] bg-black/10 rounded-[100%] blur-sm top-[70%] z-0"></div>
+                    
+                    <div id="base-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-[2px] z-20">
+                        <span class="text-gray-500 font-medium">请先上传视频或选择3D底模</span>
+                    </div>
+                </div>
+                
+                <div class="bg-white border-t border-gray-200 p-4 flex justify-between items-center text-sm">
+                    <div class="text-gray-500">当前选择: <span id="base-model-status" class="text-gray-800 font-medium">无</span></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- --- PAGE 2: 数字讲师形象定制 (CUSTOMIZATION) --- -->
+        <main id="page-customization" class="page-view flex-1 flex overflow-hidden bg-slate-50 p-6 gap-6">
+            
+            <!-- Left Column: Controls -->
+            <div class="w-1/3 flex flex-col gap-6 h-full min-w-[400px]">
+                
+                <!-- Section 2: 数字讲师形象定制 -->
+                <div class="panel flex-1 flex flex-col overflow-hidden">
+                    <div class="px-5 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                        <h2 class="font-bold text-gray-800">数字讲师形象定制</h2>
+                        <button class="btn-primary text-xs py-1 px-3" onclick="openSaveModal('lecturer')">保存讲师至资产库</button>
+                    </div>
+                    
+                    <div class="p-4 border-b border-gray-200 bg-white">
+                        <p class="text-xs font-bold text-gray-700 mb-2">第1步：选取已生成的底模</p>
+                        <select class="w-full border border-gray-300 rounded-md p-2 text-sm text-gray-700 outline-none focus:border-blue-500">
+                            <option>选择基础底模...</option>
+                            <option selected>3D真人模型 (默认)</option>
+                            <option>李工_真人克隆</option>
+                            <option>3D卡通模型</option>
+                        </select>
+                    </div>
+
+                    <div class="flex border-b border-gray-200 px-2 shrink-0 bg-gray-50">
+                        <div class="tab-btn active text-sm py-2" onclick="switchTab('custom', 'hair')">发型</div>
+                        <div class="tab-btn text-sm py-2" onclick="switchTab('custom', 'clothes')">服饰</div>
+                        <div class="tab-btn text-sm py-2" onclick="switchTab('custom', 'acc')">配饰</div>
+                        <div class="tab-btn text-sm py-2" onclick="switchTab('custom', 'voice')">声音(TTS)</div>
+                    </div>
+
+                    <div class="p-5 overflow-y-auto flex-1 bg-white">
+                        <!-- Hair -->
+                        <div id="custom-hair" class="tab-content active space-y-3">
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="asset-card selected p-2 text-center">
+                                    <div class="h-16 bg-gray-50 rounded mb-1 flex items-center justify-center text-2xl">👨‍💼</div>
+                                    <span class="text-xs text-gray-700">商务短发</span>
+                                </div>
+                                <div class="asset-card p-2 text-center">
+                                    <div class="h-16 bg-gray-50 rounded mb-1 flex items-center justify-center text-2xl">👱‍♂️</div>
+                                    <span class="text-xs text-gray-500">休闲中发</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Clothes -->
+                        <div id="custom-clothes" class="tab-content space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="asset-card selected p-3 flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded bg-blue-50 flex items-center justify-center text-xl">👔</div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-800">国网标准工装</p>
+                                        <p class="text-[10px] text-gray-500">浅蓝衬衫</p>
+                                    </div>
+                                </div>
+                                <div class="asset-card p-3 flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded bg-gray-50 flex items-center justify-center text-xl">🧥</div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-600">商务正装</p>
+                                        <p class="text-[10px] text-gray-500">深色西服套装</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accessories -->
+                        <div id="custom-acc" class="tab-content space-y-3">
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="asset-card p-2 text-center">
+                                    <div class="h-16 bg-gray-50 rounded mb-1 flex items-center justify-center text-2xl">👓</div>
+                                    <span class="text-xs text-gray-700">黑框眼镜</span>
+                                </div>
+                                <div class="asset-card selected p-2 text-center">
+                                    <div class="h-16 bg-gray-50 rounded mb-1 flex items-center justify-center text-2xl">🪪</div>
+                                    <span class="text-xs text-gray-700">企业工牌</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Voice -->
+                        <div id="custom-voice" class="tab-content space-y-4">
+                            <div class="space-y-2">
+                                <label class="text-xs font-medium text-gray-700">选择TTS音色库</label>
+                                <select class="w-full border border-gray-300 rounded-md p-2 text-sm text-gray-700 outline-none focus:border-blue-500">
+                                    <option>系统预置：国网男声_专业 (适合政策解读)</option>
+                                    <option>系统预置：国网女声_亲切 (适合客服答疑)</option>
+                                    <option>真人克隆：李工_专属音色</option>
+                                </select>
+                            </div>
+                            
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <label class="text-xs font-medium text-gray-700 mb-2 block">音色合成试听</label>
+                                <div class="flex items-center gap-3">
+                                    <button class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white hover:bg-blue-600 shrink-0">
+                                        <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"></path></svg>
+                                    </button>
+                                    <div class="h-1.5 flex-1 bg-gray-200 rounded-full overflow-hidden">
+                                        <div class="w-1/3 h-full bg-blue-500"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Visual Preview Canvas -->
+            <div class="flex-1 panel overflow-hidden flex flex-col">
+                <div class="px-5 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                    <h2 class="font-bold text-gray-800">定制讲师预览 (Customized Preview)</h2>
+                    <div class="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200">应用装扮渲染中</div>
+                </div>
+                
+                <div class="flex-1 stage-container flex items-center justify-center relative">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D&backgroundColor=transparent&clothing=blazerAndShirt" alt="Avatar Preview" class="w-[300px] h-auto model-preview z-10 transition-all duration-300">
+                    <div class="absolute w-[250px] h-[30px] bg-black/10 rounded-[100%] blur-sm top-[70%] z-0"></div>
+                </div>
+                
+                <div class="bg-white border-t border-gray-200 p-4 flex justify-between items-center text-sm">
+                    <div class="text-gray-500">
+                        当前装扮: <span class="text-gray-800 font-medium">3D真人 + 商务短发 + 国网工装 + 企业工牌 + 国网男声</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- --- PAGE 3: 讲师资产库 (ASSET LIBRARY) --- -->
+        <main id="page-assets" class="page-view flex-1 flex flex-col bg-slate-50 p-6 overflow-y-auto">
+            
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="font-bold text-gray-800 mb-2">讲师资产库</h2>
+                    <p class="text-sm text-gray-500">这里集中管理您通过“真人克隆”和“3D定制”保存的数字讲师资产。这些讲师可以在后续的【培训课件生成】与【视频课堂】模块中被直接调用发布。</p>
+                </div>
+                <div class="flex gap-3">
+                    <div class="relative">
+                        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <input type="text" placeholder="搜索讲师名称..." class="pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-blue-500 w-64">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="flex gap-6 border-b border-gray-200 mb-6">
+                <div class="pb-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600 cursor-pointer">全部资产 (4)</div>
+                <div class="pb-3 text-sm font-medium text-gray-500 hover:text-gray-800 cursor-pointer">真人克隆模型 (1)</div>
+                <div class="pb-3 text-sm font-medium text-gray-500 hover:text-gray-800 cursor-pointer">3D定制讲师 (3)</div>
+            </div>
+
+            <!-- Asset Grid -->
+            <div class="grid grid-cols-4 gap-6">
+                
+                <!-- Asset 1: Cloned Real Human -->
+                <div class="panel overflow-hidden group hover:shadow-lg transition-all">
+                    <div class="aspect-square bg-gray-100 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
+                        <span class="absolute top-3 left-3 px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded">真人克隆</span>
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=RealClone&backgroundColor=transparent&style=circle" class="w-2/3 h-2/3 object-cover group-hover:scale-105 transition-transform duration-300">
+                        
+                        <!-- Hover Actions -->
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 hover:bg-blue-50 hover:text-blue-600 shadow" title="预览">
+                                <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"></path></svg>
+                            </button>
+                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 hover:bg-blue-50 hover:text-blue-600 shadow" title="编辑修改" onclick="switchPage('page-customization', this)">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </button>
+                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 hover:bg-red-50 hover:text-red-600 shadow" title="删除" onclick="deleteAsset(this)">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-1">
+                            <h3 class="font-bold text-gray-800 text-sm truncate">李工_营销专家</h3>
+                            <span class="w-2 h-2 rounded-full bg-green-500" title="状态正常"></span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-3 truncate">基础模型: 本地上传解析视频</p>
+                        <div class="flex gap-1 flex-wrap">
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded border border-gray-200">原声克隆</span>
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded border border-gray-200">标准工装</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Asset 2: 3D Custom -->
+                <div class="panel overflow-hidden group hover:shadow-lg transition-all" id="new-asset" style="border: 2px solid var(--primary); box-shadow: 0 0 0 2px rgba(14,165,233,0.2);">
+                    <div class="aspect-square bg-gray-100 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
+                        <span class="absolute top-3 left-3 px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded">3D定制</span>
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D&backgroundColor=transparent&clothing=blazerAndShirt" class="w-2/3 h-2/3 object-cover group-hover:scale-105 transition-transform duration-300">
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 hover:bg-blue-50 hover:text-blue-600 shadow" title="预览">
+                                <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"></path></svg>
+                            </button>
+                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 hover:bg-blue-50 hover:text-blue-600 shadow" title="编辑修改" onclick="switchPage('page-customization', this)">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </button>
+                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 hover:bg-red-50 hover:text-red-600 shadow" title="删除" onclick="deleteAsset(this)">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-1">
+                            <h3 class="font-bold text-gray-800 text-sm truncate">3D男讲师_默认(刚刚保存)</h3>
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-3 truncate">基础模型: 3D写实男模</p>
+                        <div class="flex gap-1 flex-wrap">
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded border border-gray-200">国网男声_专业</span>
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded border border-gray-200">企业工牌</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Asset 3: 3D Custom -->
+                <div class="panel overflow-hidden group hover:shadow-lg transition-all">
+                    <div class="aspect-square bg-gray-100 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
+                        <span class="absolute top-3 left-3 px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded">3D二次元</span>
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Anime3D&backgroundColor=transparent&clothing=shirtCrewNeck" class="w-2/3 h-2/3 object-cover group-hover:scale-105 transition-transform duration-300">
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 hover:bg-blue-50 hover:text-blue-600 shadow" title="预览">
+                                <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"></path></svg>
+                            </button>
+                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 hover:bg-blue-50 hover:text-blue-600 shadow" title="编辑修改" onclick="switchPage('page-customization', this)">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </button>
+                            <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-800 hover:bg-red-50 hover:text-red-600 shadow" title="删除" onclick="deleteAsset(this)">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-1">
+                            <h3 class="font-bold text-gray-800 text-sm truncate">3D女客服_亲切版</h3>
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-3 truncate">基础模型: 3D二次元</p>
+                        <div class="flex gap-1 flex-wrap">
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded border border-gray-200">国网女声_亲切</span>
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded border border-gray-200">营业厅制服</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Create New Placeholder -->
+                <div class="panel border-dashed border-2 border-gray-300 bg-transparent flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all min-h-[250px]" onclick="switchPage('page-customization', this)">
+                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-blue-500 shadow mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-600">新建定制讲师</span>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast">
+        <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <div>
+                <p class="text-sm font-bold text-gray-800">操作成功</p>
+                <p class="text-xs text-gray-500 mt-1" id="toast-msg">已保存至资产库。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Modal -->
+    <div id="save-modal" class="modal-backdrop">
+        <div class="modal-content flex flex-col">
+            <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-gray-800" id="modal-title">保存资产</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeModal()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-sm text-gray-600" id="modal-desc">请为您的模型/讲师输入一个易于识别的名称。</p>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">资产名称 <span class="text-red-500">*</span></label>
+                    <input type="text" id="asset-name-input" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:border-blue-500" placeholder="例如：李工_营销专家_V1">
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+                <button class="btn-outline text-sm py-1.5" onclick="closeModal()">取消</button>
+                <button class="btn-primary text-sm py-1.5" onclick="confirmSave()">确认保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        // Define switchRole globally
+        function switchRole(role) {
+            localStorage.setItem('currentRole', role);
+            const roleName = document.getElementById('role-name');
+            const roleAvatar = document.getElementById('role-avatar');
+            
+            if(roleName && roleAvatar) {
+                if(role === 'student') {
+                    roleName.innerText = '营业员 (学员端)';
+                    roleAvatar.innerText = '营';
+                    roleAvatar.className = 'w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm';
+                    // Redirect to student page
+                    window.location.href = 'prototype_interactive_classroom.html';
+                } else {
+                    roleName.innerText = '系统管理员 (管理端)';
+                    roleAvatar.innerText = '管';
+                    roleAvatar.className = 'w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold text-sm';
+                }
+            }
+        }
+
+        // Handle Sidebar Menu Accordion Toggle
+        function toggleMenu(element) {
+            const group = element.parentElement;
+            group.classList.toggle('open');
+        }
+
+        // Handle Page Switching
+        function switchPage(pageId, menuItem) {
+            document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) targetPage.classList.add('active');
+
+            document.querySelectorAll('.sub-menu-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.menu-group').forEach(g => g.classList.remove('open'));
+            document.querySelectorAll('.menu-title').forEach(t => t.classList.remove('active'));
+            
+            if(menuItem) {
+                menuItem.classList.add('active');
+                const group = menuItem.closest('.menu-group');
+                if (group) {
+                    group.classList.add('open');
+                    const title = group.querySelector('.menu-title');
+                    if (title) title.classList.add('active');
+                }
+            }
+            
+            if(window.history && window.history.pushState) window.history.pushState(null, '', `#${pageId}`);
+            if(pageId === 'page-dashboard' && typeof initCharts === 'function') setTimeout(initCharts, 100);
+        }
+
+        // Handle Main Content Tabs (Modeling & Customization Pages)
+        function switchTab(group, tabId) {
+            const container = document.getElementById(group === 'modeling' ? 'modeling-clone' : 'custom-hair').parentElement.parentElement;
+            let btns, contents;
+            
+            if (group === 'modeling') {
+                btns = document.querySelectorAll('#page-modeling .tab-btn');
+                contents = [document.getElementById('modeling-clone'), document.getElementById('modeling-3d')];
+            } else {
+                btns = document.querySelectorAll('#page-customization .tab-btn');
+                contents = [
+                    document.getElementById('custom-hair'), 
+                    document.getElementById('custom-clothes'),
+                    document.getElementById('custom-acc'),
+                    document.getElementById('custom-voice')
+                ];
+            }
+
+            btns.forEach(b => b.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`${group}-${tabId}`).classList.add('active');
+        }
+
+        // Simple selection logic for asset cards
+        document.querySelectorAll('.asset-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const siblings = this.parentElement.querySelectorAll('.asset-card');
+                siblings.forEach(s => s.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+
+        // Modeling Interactions
+        function simulateUpload() {
+            document.getElementById('upload-progress').style.display = 'block';
+            setTimeout(() => {
+                showToast('视频解析完成，1:1 真人模型已生成。');
+                const preview = document.getElementById('base-model-preview');
+                const placeholder = document.getElementById('base-placeholder');
+                preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=RealClone&backgroundColor=transparent&style=circle";
+                preview.classList.remove('opacity-50', 'grayscale');
+                placeholder.style.display = 'none';
+                document.getElementById('base-model-status').innerText = '真人克隆模型';
+            }, 1000);
+        }
+
+        function changeBasePreview(type) {
+            const preview = document.getElementById('base-model-preview');
+            const placeholder = document.getElementById('base-placeholder');
+            preview.classList.remove('opacity-50', 'grayscale');
+            placeholder.style.display = 'none';
+            document.getElementById('base-model-status').innerText = type;
+            
+            if(type === '3D真人-男1') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D1&backgroundColor=transparent";
+            if(type === '3D真人-男2') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D3&backgroundColor=transparent&facialHair=beardLight";
+            if(type === '3D真人-女1') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D2&backgroundColor=transparent&clothing=shirtScoopNeck";
+            if(type === '3D真人-女2') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Real3D4&backgroundColor=transparent&top=longHairStraight";
+            
+            if(type === '3D卡通-男1') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Cartoon3D1&backgroundColor=transparent&style=circle";
+            if(type === '3D卡通-男2') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Cartoon3D3&backgroundColor=transparent&style=circle&top=shortHairShortWaved";
+            if(type === '3D卡通-女1') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Cartoon3D2&backgroundColor=transparent&style=circle";
+            if(type === '3D卡通-女2') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Cartoon3D4&backgroundColor=transparent&style=circle&top=longHairCurly";
+            
+            if(type === '3D二次元-男1') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Anime3D3&backgroundColor=transparent&top=shortHairTheCaesar";
+            if(type === '3D二次元-男2') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Anime3D4&backgroundColor=transparent&top=shortHairDreads01";
+            if(type === '3D二次元-女1') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Anime3D1&backgroundColor=transparent&eyes=hearts";
+            if(type === '3D二次元-女2') preview.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Anime3D2&backgroundColor=transparent&eyes=wink";
+        }
+
+        // Modal Logic
+        let currentSaveType = ''; // 'base' or 'lecturer'
+
+        function openSaveModal(type) {
+            currentSaveType = type;
+            const modal = document.getElementById('save-modal');
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            const input = document.getElementById('asset-name-input');
+            
+            if (type === 'base') {
+                title.innerText = '保存基础底模';
+                desc.innerText = '请为该基础数字人模型命名，以便在“形象定制”时选取。';
+                input.placeholder = '例如：李工_原声克隆底模';
+            } else {
+                title.innerText = '保存数字讲师';
+                desc.innerText = '请为该定制完成的数字讲师命名，保存后将可在资产库中查看和调用。';
+                input.placeholder = '例如：3D男客服_标准装_V1';
+            }
+            
+            input.value = '';
+            modal.classList.add('active');
+            input.focus();
+        }
+
+        function closeModal() {
+            document.getElementById('save-modal').classList.remove('active');
+        }
+
+        function confirmSave() {
+            const input = document.getElementById('asset-name-input').value.trim();
+            if(!input) {
+                alert('请输入资产名称');
+                return;
+            }
+
+            closeModal();
+            
+            if (currentSaveType === 'base') {
+                showToast(`底模 [${input}] 保存成功，请前往“形象定制”模块装扮。`);
+                setTimeout(() => {
+                    switchPage('page-customization', document.querySelector('.sub-menu-item:nth-child(2)'));
+                }, 1500);
+            } else {
+                showToast(`讲师 [${input}] 保存成功，正在跳转资产库...`);
+                setTimeout(() => {
+                    switchPage('page-assets', document.querySelector('.sub-menu-item:nth-child(3)'));
+                    const newAsset = document.getElementById('new-asset');
+                    if(newAsset) {
+                        newAsset.querySelector('h3').innerText = input;
+                        setTimeout(() => {
+                            newAsset.style.border = '1px solid var(--border-color)';
+                            newAsset.style.boxShadow = 'none';
+                        }, 3000);
+                    }
+                }, 1500);
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if(msg) document.getElementById('toast-msg').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // Delete Asset Logic
+        function deleteAsset(btnElement) {
+            // Prevent event from bubbling up to the card
+            event.stopPropagation();
+            
+            if(confirm('确定要删除该数字讲师资产吗？此操作不可恢复。')) {
+                // Find the parent asset card
+                const card = btnElement.closest('.panel');
+                if(card) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    card.style.transition = 'all 0.3s ease';
+                    setTimeout(() => {
+                        card.remove();
+                        showToast('讲师资产已成功删除。');
+                    }, 300);
+                }
+            }
+        }
+
+        // Check hash on load to jump to specific tab
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash;
+            if (hash) {
+                const pageId = hash.substring(1); // remove '#'
+                let menuIndex = 1;
+                if(pageId === 'page-customization') menuIndex = 2;
+                if(pageId === 'page-assets') menuIndex = 3;
+                
+                const menuItem = document.querySelector(`.sub-menu-list .sub-menu-item:nth-child(${menuIndex})`);
+                if(menuItem) {
+                    switchPage(pageId, menuItem);
+                }
+            }
+        });
+    </script>
+
+    
+    <script>
+        
+        // Enhance sidebar links to switch role before navigation
+        document.addEventListener('click', (e) => {
+            // If the user clicks on any element inside an .admin-only container, or the container itself
+            if (e.target.closest('.admin-only') || e.target.closest('[onclick*="modeling"]') || e.target.closest('[onclick*="courseware"]') || e.target.closest('[onclick*="digital_classroom"]') || e.target.closest('[onclick*="course_review"]')) {
+                localStorage.setItem('currentRole', 'admin');
+            }
+        }, true); // Use capture phase to ensure this runs before the actual click handler (e.g. window.location.href)
+
+                // Persist role across page loads and apply UI changes
+        document.addEventListener('DOMContentLoaded', () => {
+            let savedRole = localStorage.getItem('currentRole') || 'student';
+            const path = window.location.pathname;
+            const isAdminPage = path.includes('modeling') || 
+                                path.includes('courseware') || 
+                                path.includes('digital_classroom') || 
+                                path.includes('course_review') || 
+                                path.includes('system_management');
+            
+            if (isAdminPage) {
+                localStorage.setItem('currentRole', 'admin');
+                savedRole = 'admin';
+            }
+
+            const adminMenus = document.querySelectorAll('.admin-only');
+            const studentMenus = document.querySelectorAll('.student-only');
+            
+            if(savedRole === 'student') {
+                adminMenus.forEach(el => el.style.display = 'none');
+                studentMenus.forEach(el => {
+                    if(el.classList.contains('menu-group')) {
+                        el.style.display = 'block';
+                    } else if(el.classList.contains('sub-menu-item')) {
+                        el.style.display = 'flex';
+                    } else {
+                        el.style.display = 'block';
+                    }
+                });
+            } else {
+                adminMenus.forEach(el => {
+                    if(el.classList.contains('menu-group')) {
+                        el.style.display = 'block';
+                    } else if(el.classList.contains('sub-menu-item')) {
+                        el.style.display = 'flex';
+                    } else {
+                        el.style.display = 'block';
+                    }
+                });
+                studentMenus.forEach(el => el.style.display = 'none');
+            }
+
+            // Auto open the current menu group based on URL
+            const currentPage = window.location.pathname.split('/').pop() || 'prototype_interactive_classroom.html';
+            const hash = window.location.hash.substring(1);
+            let activePageId = hash;
+            
+            if (!activePageId) {
+                if (currentPage.includes('modeling')) activePageId = 'page-modeling';
+                if (currentPage.includes('courseware')) activePageId = 'page-outline';
+                if (currentPage.includes('digital_classroom')) activePageId = 'page-video-editor';
+                if (currentPage.includes('course_review')) activePageId = 'page-review';
+                if (currentPage.includes('system_management')) activePageId = 'page-user-management';
+                if (currentPage.includes('interactive_classroom')) {
+                    activePageId = savedRole === 'admin' ? 'page-path-config' : 'page-dashboard';
+                }
+                if (currentPage.includes('ai_companion')) activePageId = 'page-ai-companion';
+            }
+            
+            document.querySelectorAll('.sub-menu-item').forEach(el => {
+                el.classList.remove('active');
+                const onclickStr = el.getAttribute('onclick') || '';
+                if (activePageId && onclickStr.includes(activePageId)) {
+                    el.classList.add('active');
+                    const group = el.closest('.menu-group');
+                    if (group) {
+                        group.classList.add('open');
+                        const title = group.querySelector('.menu-title');
+                        if (title) title.classList.add('active');
+                    }
+                }
+            });
+
+            if (typeof switchRole === 'function') {
+                switchRole(savedRole);
+            }
+        });
+
+        const originalSwitchRole = typeof switchRole === 'function' ? switchRole : null;
+        if (originalSwitchRole) {
+            window.switchRole = function(role) {
+                localStorage.setItem('currentRole', role);
+                originalSwitchRole(role);
+                
+                // Optional: If student role is selected on an admin page, redirect to student page
+                const path = window.location.pathname;
+                const isAdminPage = path.includes('modeling') || 
+                                    path.includes('courseware') || 
+                                    path.includes('digital_classroom') || 
+                                    path.includes('course_review') || 
+                                path.includes('system_management');
+                if (role === 'student' && isAdminPage) {
+                    window.location.href = 'prototype_interactive_classroom.html';
+                }
+            };
+        }
+    </script>
+</body>
+</html>

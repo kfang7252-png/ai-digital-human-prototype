@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>移动端学习平台 - 数智培训中心</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #e0e7ff;
+            --bg-color: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #cbd5e1;
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Mobile Device Frame for PC browsers */
+        #mobile-container {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        @media (min-width: 640px) {
+            #mobile-container {
+                max-width: 414px;
+                height: 896px;
+                max-height: 90vh;
+                border-radius: 40px;
+                border: 12px solid #0f172a;
+                margin: auto;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+            }
+            
+            /* Add notch for realism */
+            #mobile-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 140px;
+                height: 30px;
+                background-color: #0f172a;
+                border-bottom-left-radius: 18px;
+                border-bottom-right-radius: 18px;
+                z-index: 1000;
+            }
+        }
+
+        /* Hide scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .slide-up { opacity: 0; animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .slide-up-delay-1 { animation-delay: 0.1s; }
+        .slide-up-delay-2 { animation-delay: 0.2s; }
+        .slide-up-delay-3 { animation-delay: 0.3s; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Glassmorphism Bottom Nav */
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(241, 245, 249, 0.8);
+            padding-bottom: env(safe-area-inset-bottom, 16px);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex-direction: column;
+            padding-bottom: 90px; /* Space for nav */
+            padding-top: env(safe-area-inset-top, 44px);
+        }
+        .tab-content.active { display: flex; }
+
+        /* Progress Ring */
+        .progress-ring {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: conic-gradient(var(--primary) 65%, #e2e8f0 0);
+            display: flex; align-items: center; justify-content: center; position: relative;
+        }
+        .progress-ring::before {
+            content: ''; position: absolute; width: 58px; height: 58px; background-color: white; border-radius: 50%;
+        }
+
+        /* Nav Icon Active State */
+        .nav-item { color: #94a3b8; transition: all 0.2s; }
+        .nav-item.active { color: var(--primary); font-weight: 600; }
+        .nav-item.active svg { stroke: var(--primary); fill: var(--primary-light); transform: scale(1.1); }
+
+        /* AI Floating Button */
+        .ai-btn {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #d946ef);
+            background-size: 200% 200%;
+            animation: gradientMove 3s ease infinite;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+        }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        
+        .ai-btn-glow {
+            position: absolute; inset: 0; border-radius: 50%; background: inherit; filter: blur(12px); opacity: 0.6; z-index: -1; animation: pulseGlow 2s infinite alternate;
+        }
+        @keyframes pulseGlow { from { transform: scale(1); opacity: 0.4; } to { transform: scale(1.2); opacity: 0.8; } }
+
+        /* Chat Bubbles */
+        .chat-bubble-ai {
+            background-color: white; border-radius: 16px 16px 16px 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); padding: 12px 16px; max-width: 85%; font-size: 0.9rem; line-height: 1.5; color: #334155;
+        }
+        .chat-bubble-user {
+            background: linear-gradient(135deg, var(--primary), #818cf8); color: white; border-radius: 16px 16px 4px 16px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2); padding: 12px 16px; max-width: 85%; font-size: 0.9rem; line-height: 1.5; align-self: flex-end;
+        }
+
+        /* Timeline / Path Stepper */
+        .path-line { position: absolute; left: 19px; top: 32px; bottom: -16px; width: 2px; background-color: #e2e8f0; z-index: 0; }
+        .path-node { position: relative; z-index: 1; }
+        .path-item:last-child .path-line { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="mobile-container">
+        
+        <!-- === TAB 1: 首页 (Home) === -->
+        <div id="tab-home" class="tab-content active fade-in px-5">
+            <!-- Header -->
+            <div class="flex justify-between items-center mt-6 mb-6 slide-up">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shadow-sm overflow-hidden">
+                        <img src="https://ui-avatars.com/api/?name=李四&background=e0e7ff&color=4f46e5&size=100" alt="avatar" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800 leading-tight">早上好，李四</h2>
+                        <p class="text-xs text-gray-500">营业员 · 华东大区</p>
+                    </div>
+                </div>
+                <div class="relative w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm cursor-pointer" onclick="showToast('暂无新消息')">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                    <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                </div>
+            </div>
+
+            <!-- Stats Card -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm mb-6 slide-up slide-up-delay-1 border border-gray-100">
+                <p class="text-xs font-bold text-gray-800 mb-4 border-b border-gray-50 pb-2">我的学习进度</p>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-blue-50 rounded-xl p-2 cursor-pointer transition hover:bg-blue-100" onclick="showToast('查看已完成课程')">
+                        <div class="text-xl font-extrabold text-blue-600 mb-0.5">12</div>
+                        <div class="text-[10px] text-gray-500 font-medium">已完成</div>
+                    </div>
+                    <div class="bg-indigo-50 rounded-xl p-2 cursor-pointer transition hover:bg-indigo-100" onclick="showToast('查看进行中课程')">
+                        <div class="text-xl font-extrabold text-indigo-600 mb-0.5">3</div>
+                        <div class="text-[10px] text-gray-500 font-medium">进行中</div>
+                    </div>
+                    <div class="bg-orange-50 rounded-xl p-2 cursor-pointer transition hover:bg-orange-100" onclick="showToast('查看待学习课程')">
+                        <div class="text-xl font-extrabold text-orange-500 mb-0.5">8</div>
+                        <div class="text-[10px] text-gray-500 font-medium">待学习</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Continue Learning -->
+            <div class="flex justify-between items-end mb-3 slide-up slide-up-delay-2">
+                <h3 class="font-bold text-gray-800">进行中课程</h3>
+                <span class="text-xs text-blue-600 font-medium cursor-pointer">查看全部</span>
+            </div>
+            <div class="flex flex-col gap-3 pb-6 slide-up slide-up-delay-2">
+                <!-- Course Item 1 -->
+                <div class="bg-white rounded-xl p-3 flex gap-3 shadow-sm border border-gray-100 cursor-pointer" onclick="openPlayer()">
+                    <div class="w-24 h-20 rounded-lg overflow-hidden relative shrink-0">
+                        <img src="https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" class="w-full h-full object-cover" alt="cover">
+                        <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <div class="w-8 h-8 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center flex-1">
+                        <h4 class="font-bold text-gray-800 text-xs mb-1 line-clamp-2">5G套餐客户异议处理标准话术</h4>
+                        <p class="text-[10px] text-gray-500 mb-2">数字讲师 · 雅涵</p>
+                        <div class="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+                            <div class="bg-blue-600 h-1.5 rounded-full" style="width: 28%"></div>
+                        </div>
+                        <div class="text-[9px] text-gray-400 text-right">已学 28%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wait for learning list -->
+            <div class="flex justify-between items-end mb-3 slide-up slide-up-delay-3">
+                <h3 class="font-bold text-gray-800">待学课程</h3>
+            </div>
+            <div class="flex flex-col gap-3 pb-6 slide-up slide-up-delay-3">
+                <!-- Course Item 1 (Locked) -->
+                <div class="bg-gray-50 rounded-xl p-3 flex gap-3 shadow-sm border border-gray-100 cursor-not-allowed opacity-70" onclick="showToast('课程已锁定：需先完成前置课程')">
+                    <div class="w-16 h-16 rounded-lg overflow-hidden relative shrink-0">
+                        <img src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" class="w-full h-full object-cover grayscale" alt="cover">
+                        <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center flex-1">
+                        <h4 class="font-bold text-gray-800 text-xs mb-1 line-clamp-1">宽带装维服务规范与安全准则</h4>
+                        <p class="text-[10px] text-gray-500 mb-1">60分钟 · 数字讲师 李工</p>
+                        <span class="text-[9px] text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded w-fit">未解锁：需完成前置课程</span>
+                    </div>
+                </div>
+                <!-- Course Item 2 (Locked) -->
+                <div class="bg-gray-50 rounded-xl p-3 flex gap-3 shadow-sm border border-gray-100 cursor-not-allowed opacity-70" onclick="showToast('课程已锁定：需先完成前置课程')">
+                    <div class="w-16 h-16 rounded-lg overflow-hidden relative shrink-0">
+                        <img src="https://images.unsplash.com/photo-1553877522-43269d4ea984?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" class="w-full h-full object-cover grayscale" alt="cover">
+                        <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center flex-1">
+                        <h4 class="font-bold text-gray-800 text-xs mb-1 line-clamp-1">如何提升客户满意度？(情景模拟)</h4>
+                        <p class="text-[10px] text-gray-500 mb-1">30分钟 · 数字讲师 王主管</p>
+                        <span class="text-[9px] text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded w-fit">未解锁：需完成前置课程</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Completed learning list -->
+            <div class="flex justify-between items-end mb-3 slide-up slide-up-delay-3">
+                <h3 class="font-bold text-gray-800">已完成课程</h3>
+            </div>
+            <div class="flex flex-col gap-3 pb-6 slide-up slide-up-delay-3">
+                <!-- Course Item 1 -->
+                <div class="bg-white rounded-xl p-3 flex gap-3 shadow-sm border border-gray-100 cursor-pointer" onclick="showToast('正在打开课程...')">
+                    <div class="w-16 h-16 rounded-lg overflow-hidden relative shrink-0">
+                        <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" class="w-full h-full object-cover" alt="cover">
+                    </div>
+                    <div class="flex flex-col justify-center flex-1">
+                        <h4 class="font-bold text-gray-800 text-xs mb-1 line-clamp-1">企业文化与合规教育</h4>
+                        <p class="text-[10px] text-gray-500 mb-1">45分钟 · 数字讲师 张总</p>
+                        <span class="text-[9px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded w-fit flex items-center gap-1">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            已完成
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === TAB 2: 学习路径 (Path) === -->
+        <div id="tab-path" class="tab-content px-5 bg-white">
+            <div class="pt-8 pb-4 bg-white sticky top-0 z-10">
+                <h2 class="text-xl font-bold text-gray-800">专属学习路径</h2>
+                <p class="text-xs text-gray-500 mt-1">新入职营业员通关计划 (第一阶段)</p>
+            </div>
+
+            <div class="mt-4 relative pl-2 pb-10">
+                <!-- Item 1 (Completed) -->
+                <div class="path-item relative flex gap-4 mb-8 slide-up">
+                    <div class="path-line"></div>
+                    <div class="path-node w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0 border-4 border-white shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <div class="pt-1">
+                        <div class="text-[10px] font-bold text-green-600 mb-1">已完成 · 100 学分</div>
+                        <h3 class="font-bold text-gray-800 text-sm mb-1">企业文化与合规教育</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">了解集团发展历程、核心价值观及信息安全保密红线要求。</p>
+                    </div>
+                </div>
+
+                <!-- Item 2 (In Progress) -->
+                <div class="path-item relative flex gap-4 mb-8 slide-up slide-up-delay-1">
+                    <div class="path-line"></div>
+                    <div class="path-node w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 border-4 border-white shadow-md ring-2 ring-blue-100">
+                        <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg>
+                    </div>
+                    <div class="pt-1 w-full">
+                        <div class="text-[10px] font-bold text-blue-600 mb-1">进行中 · 进度 28%</div>
+                        <h3 class="font-bold text-gray-800 text-sm mb-1">基础业务与系统操作</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-3">掌握CRM系统核心模块操作，熟悉5G/宽带等基础套餐办理流程。</p>
+                        
+                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <div class="flex justify-between text-xs mb-2">
+                                <span class="text-gray-600">5G套餐客户异议处理...</span>
+                                <span class="text-blue-600 font-medium">学习中</span>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-gray-400">实名制人像比对规范</span>
+                                <span class="text-gray-400">未开始</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 3 (Locked) -->
+                <div class="path-item relative flex gap-4 mb-8 slide-up slide-up-delay-2">
+                    <div class="path-line"></div>
+                    <div class="path-node w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center shrink-0 border-4 border-white shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <div class="pt-1">
+                        <div class="text-[10px] font-bold text-gray-400 mb-1">未解锁 · 需完成前置课程</div>
+                        <h3 class="font-bold text-gray-500 text-sm mb-1">高级营销与服务技巧</h3>
+                        <p class="text-xs text-gray-400 leading-relaxed">通过AI对练模拟真实客诉场景，提升服务满意度与营销转化率。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === TAB 3: AI助手 (AI Companion) === -->
+        <div id="tab-ai" class="tab-content relative bg-slate-50">
+            <!-- Digital Human Visual (Fixed at top inside tab) -->
+            <div class="h-64 bg-gray-900 relative shrink-0 overflow-hidden shadow-md z-10">
+                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover opacity-60 mix-blend-luminosity" alt="Digital Human">
+                <div class="absolute inset-0 bg-gradient-to-b from-indigo-900/30 via-transparent to-slate-50"></div>
+                
+                <div class="absolute top-safe left-4 right-4 flex justify-between items-center mt-4">
+                    <div class="bg-black/30 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/10">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        数字讲师 · 雅涵在线
+                    </div>
+                    <button class="w-8 h-8 rounded-full bg-black/30 backdrop-blur flex items-center justify-center text-white border border-white/10">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Voice wave animation -->
+                <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1">
+                    <div class="w-1 bg-white/60 h-2 rounded-full animate-[bounce_1s_infinite] animation-delay-100"></div>
+                    <div class="w-1 bg-white/80 h-4 rounded-full animate-[bounce_1s_infinite] animation-delay-200"></div>
+                    <div class="w-1 bg-white h-6 rounded-full animate-[bounce_1s_infinite] animation-delay-300"></div>
+                    <div class="w-1 bg-white/80 h-3 rounded-full animate-[bounce_1s_infinite] animation-delay-400"></div>
+                    <div class="w-1 bg-white/60 h-2 rounded-full animate-[bounce_1s_infinite] animation-delay-500"></div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 pb-24">
+                <div class="text-center text-[10px] text-gray-400 my-2">今天 10:24</div>
+                
+                <!-- AI Message -->
+                <div class="flex gap-2 items-end slide-up">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 overflow-hidden shrink-0">
+                        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" class="w-full h-full object-cover" alt="AI">
+                    </div>
+                    <div class="chat-bubble-ai">
+                        早上好李四！我是你的专属AI伴学助手雅涵。你今天还有 <span class="text-blue-600 font-bold">1</span> 节必修课未完成，需要我现在为你播放吗？
+                    </div>
+                </div>
+
+                <!-- User Message -->
+                <div class="flex flex-col gap-2 items-end slide-up slide-up-delay-1">
+                    <div class="chat-bubble-user">
+                        我想先复习一下昨天讲的“宽带套餐资费”的重点，能帮我总结一下吗？
+                    </div>
+                </div>
+
+                <!-- AI Message (Typing...) -->
+                <div class="flex gap-2 items-end slide-up slide-up-delay-2">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 overflow-hidden shrink-0">
+                        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" class="w-full h-full object-cover" alt="AI">
+                    </div>
+                    <div class="chat-bubble-ai">
+                        没问题。关于“千兆宽带融合套餐”，你需要记住这三个核心卖点：<br>
+                        1. <strong>全家共享</strong>：主副卡共享流量与语音。<br>
+                        2. <strong>提速不提价</strong>：老用户预存即可免费升级千兆。<br>
+                        3. <strong>智家服务</strong>：赠送全屋WiFi路由器及上门安装。
+                        <br><br>
+                        需要进行一段 <strong>情景模拟对话</strong> 来测试你的掌握程度吗？
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input (Fixed at bottom inside tab, above global nav) -->
+            <div class="absolute bottom-0 left-0 right-0 p-3 bg-white border-t border-gray-100 z-20 pb-24">
+                <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-4 py-2">
+                    <button class="text-gray-400 hover:text-blue-600 shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                    </button>
+                    <input type="text" placeholder="输入问题或点击左侧语音..." class="flex-1 bg-transparent border-none text-sm focus:outline-none text-gray-700">
+                    <button class="text-blue-600 shrink-0 font-medium text-sm" onclick="showToast('发送功能演示')">发送</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- === TAB 4: 交互式培训课堂 (Classroom) === -->
+        <div id="tab-classroom" class="tab-content px-5 bg-gray-50">
+            <div class="pt-8 pb-4 sticky top-0 z-10 bg-gray-50">
+                <h2 class="text-xl font-bold text-gray-800">交互式培训课堂</h2>
+                <p class="text-xs text-gray-500 mt-1">按岗位精准推送的学习资源</p>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative mb-6 slide-up">
+                <input type="text" placeholder="搜索课程或知识点..." class="w-full bg-white border-none rounded-xl py-3 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+
+            <!-- Course Categories -->
+            <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6 slide-up slide-up-delay-1">
+                <span class="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full whitespace-nowrap shadow-sm">全部</span>
+                <span class="px-4 py-1.5 bg-white text-gray-600 text-xs font-medium rounded-full whitespace-nowrap border border-gray-200">5G业务</span>
+                <span class="px-4 py-1.5 bg-white text-gray-600 text-xs font-medium rounded-full whitespace-nowrap border border-gray-200">宽带装维</span>
+                <span class="px-4 py-1.5 bg-white text-gray-600 text-xs font-medium rounded-full whitespace-nowrap border border-gray-200">客户服务</span>
+            </div>
+
+            <!-- Course List -->
+            <div class="space-y-4 pb-8 slide-up slide-up-delay-2">
+                <!-- Course 1 -->
+                <div class="bg-white rounded-2xl p-3 flex gap-3 shadow-sm border border-gray-100 cursor-pointer" onclick="openPlayer()">
+                    <div class="w-24 h-24 rounded-xl overflow-hidden relative shrink-0">
+                        <img src="https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80" class="w-full h-full object-cover" alt="cover">
+                        <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white/90" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center flex-1">
+                        <h3 class="font-bold text-gray-800 text-sm mb-1 leading-tight line-clamp-2">5G套餐客户异议处理标准话术</h3>
+                        <p class="text-[10px] text-gray-500 mb-2 flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            45分钟 · 数字讲师 雅涵
+                        </p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-medium">支持语音提问</span>
+                            <span class="text-[10px] text-gray-400">已学 28%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Course 2 -->
+                <div class="bg-white rounded-2xl p-3 flex gap-3 shadow-sm border border-gray-100 cursor-pointer" onclick="showToast('课程已锁定，请先完成前置课程')">
+                    <div class="w-24 h-24 rounded-xl overflow-hidden relative shrink-0">
+                        <img src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80" class="w-full h-full object-cover grayscale opacity-60" alt="cover">
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px]">
+                            <svg class="w-6 h-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center flex-1 opacity-60">
+                        <h3 class="font-bold text-gray-800 text-sm mb-1 leading-tight line-clamp-2">宽带装维服务规范与安全准则</h3>
+                        <p class="text-[10px] text-gray-500 mb-2 flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            60分钟 · 数字讲师 李工
+                        </p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-medium">未解锁</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === TAB 5: 我的 (Profile) === -->
+        <div id="tab-profile" class="tab-content px-5 bg-white">
+            <div class="flex flex-col items-center justify-center h-full pb-20 slide-up">
+                <div class="w-24 h-24 rounded-full bg-blue-100 border-4 border-gray-50 shadow-sm overflow-hidden mb-4">
+                    <img src="https://ui-avatars.com/api/?name=李四&background=e0e7ff&color=4f46e5&size=200" alt="avatar" class="w-full h-full object-cover">
+                </div>
+                
+                <h2 class="text-2xl font-bold text-gray-800 mb-1">李四</h2>
+                <div class="flex items-center gap-2 mb-10 text-gray-500 text-sm">
+                    <span>初级营业员</span>
+                    <span>|</span>
+                    <span>工号: EMP089</span>
+                </div>
+                
+                <button class="w-full max-w-[200px] border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium py-3 rounded-xl transition" onclick="showToast('正在退出登录...')">
+                    退出登录
+                </button>
+            </div>
+        </div>
+
+        <!-- === TAB 6: 课程播放页 (Player) - Hidden by default === -->
+        <div id="page-player" class="absolute inset-0 bg-gray-50 z-[100] flex flex-col hidden transform translate-x-full transition-transform duration-300">
+            <!-- Video Area (Fixed top) -->
+            <div class="h-64 bg-black relative shrink-0">
+                <div class="absolute top-safe left-4 z-10 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white cursor-pointer" onclick="closePlayer()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </div>
+                
+                <img src="https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover opacity-80" alt="Video">
+                
+                <!-- Digital Human PiP -->
+                <div class="absolute bottom-4 right-4 w-24 h-32 bg-gray-800 rounded-lg overflow-hidden border-2 border-white shadow-lg">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" class="w-full h-full object-cover" alt="Digital Human">
+                    <div class="absolute bottom-1 left-1 flex gap-0.5">
+                        <div class="w-0.5 h-1.5 bg-green-400 rounded-full animate-[bounce_1s_infinite]"></div>
+                        <div class="w-0.5 h-3 bg-green-400 rounded-full animate-[bounce_1s_infinite] animation-delay-200"></div>
+                        <div class="w-0.5 h-2 bg-green-400 rounded-full animate-[bounce_1s_infinite] animation-delay-400"></div>
+                    </div>
+                </div>
+
+                <!-- Video Controls -->
+                <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent flex items-center gap-3 text-white">
+                    <svg class="w-5 h-5 cursor-pointer" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                    <div class="flex-1 h-1 bg-white/30 rounded-full relative">
+                        <div class="absolute left-0 top-0 bottom-0 bg-blue-500 rounded-full" style="width: 28%;"></div>
+                        <div class="absolute left-[28%] top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow"></div>
+                    </div>
+                    <span class="text-[10px] font-mono">12:45 / 45:00</span>
+                    <svg class="w-4 h-4 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- Tabs -->
+                <div class="flex border-b border-gray-200 bg-white shrink-0">
+                    <div class="flex-1 py-3 text-center text-sm font-bold text-blue-600 border-b-2 border-blue-600">目录大纲</div>
+                    <div class="flex-1 py-3 text-center text-sm font-medium text-gray-500 cursor-pointer" onclick="showToast('正在切换至：互动问答')">AI互动问答</div>
+                </div>
+
+                <!-- Course Info & Outline -->
+                <div class="flex-1 overflow-y-auto p-5 pb-10 bg-white">
+                    <h2 class="text-lg font-bold text-gray-800 mb-2 leading-tight">5G套餐客户异议处理标准话术</h2>
+                    <div class="flex items-center gap-4 text-xs text-gray-500 mb-6">
+                        <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 45分钟</span>
+                        <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg> 讲师雅涵</span>
+                    </div>
+
+                    <h3 class="font-bold text-gray-800 mb-4">课程大纲</h3>
+                    <div class="space-y-4 relative pl-3">
+                        <div class="absolute left-4 top-2 bottom-6 w-px bg-gray-200"></div>
+                        
+                        <!-- Outline Item 1 -->
+                        <div class="relative flex items-start gap-3">
+                            <div class="w-2.5 h-2.5 rounded-full bg-blue-600 ring-4 ring-white relative z-10 mt-1"></div>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-bold text-blue-600 mb-0.5">1. 常见异议类型分析</h4>
+                                <p class="text-xs text-gray-500">已播放完 · 10:00</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Outline Item 2 (Active) -->
+                        <div class="relative flex items-start gap-3">
+                            <div class="w-2.5 h-2.5 rounded-full bg-blue-600 ring-4 ring-blue-100 relative z-10 mt-1"></div>
+                            <div class="flex-1 bg-blue-50 rounded-lg p-3 border border-blue-100">
+                                <div class="flex justify-between items-center mb-1">
+                                    <h4 class="text-sm font-bold text-blue-700">2. 价格异议标准话术</h4>
+                                    <div class="flex gap-1 items-center">
+                                        <div class="w-1 h-3 bg-blue-500 animate-pulse"></div>
+                                        <div class="w-1 h-2 bg-blue-500 animate-pulse animation-delay-100"></div>
+                                        <div class="w-1 h-4 bg-blue-500 animate-pulse animation-delay-200"></div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-blue-600 opacity-80">播放中 · 12:45 / 20:00</p>
+                            </div>
+                        </div>
+
+                        <!-- Outline Item 3 -->
+                        <div class="relative flex items-start gap-3">
+                            <div class="w-2.5 h-2.5 rounded-full bg-gray-300 ring-4 ring-white relative z-10 mt-1"></div>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-medium text-gray-600 mb-0.5">3. 流量不够用异议处理</h4>
+                                <p class="text-xs text-gray-400">未播放 · 15:00</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Floating Action (Ask AI) -->
+            <div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] bg-white rounded-full shadow-lg border border-gray-100 p-2 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                </div>
+                <div class="flex-1 text-sm text-gray-400" onclick="showToast('打开语音对讲框')">点击向讲师提问...</div>
+            </div>
+        </div>
+
+        <!-- === BOTTOM NAVIGATION === -->
+        <div class="absolute bottom-0 w-full glass-nav z-50">
+            <div class="flex justify-around items-center px-2 pt-3 pb-1 relative">
+                
+                <!-- Dashboard Tab -->
+                <div class="nav-item active flex flex-col items-center gap-1 w-16 cursor-pointer" onclick="switchTab('home', this)">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="text-[10px]">学习看板</span>
+                </div>
+
+                <!-- Path Tab -->
+                <div class="nav-item flex flex-col items-center gap-1 w-16 cursor-pointer" onclick="switchTab('path', this)">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                    <span class="text-[10px]">学习路径</span>
+                </div>
+
+                <!-- Center AI Button -->
+                <div class="relative w-16 h-14 flex justify-center cursor-pointer group" onclick="switchTab('ai', this, true)">
+                    <div class="absolute -top-6 w-14 h-14 rounded-full ai-btn flex items-center justify-center border-4 border-white z-10 transition-transform group-active:scale-95">
+                        <div class="ai-btn-glow"></div>
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <span class="text-[10px] absolute bottom-0 font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600">AI伴学</span>
+                </div>
+
+                <!-- Interactive Classroom Tab -->
+                <div class="nav-item flex flex-col items-center gap-1 w-16 cursor-pointer" onclick="switchTab('classroom', this)">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="text-[10px]">交互课堂</span>
+                </div>
+
+                <!-- Profile Tab -->
+                <div class="nav-item flex flex-col items-center gap-1 w-16 cursor-pointer" onclick="switchTab('profile', this)">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    <span class="text-[10px]">我的</span>
+                </div>
+
+            </div>
+        </div>
+        
+        <!-- Toast Notification -->
+        <div id="toast" class="absolute top-10 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white text-xs px-4 py-2 rounded-full opacity-0 pointer-events-none transition-all duration-300 z-[9999] shadow-lg flex items-center gap-2 transform -translate-y-4">
+            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <span id="toast-msg">提示信息</span>
+        </div>
+
+    </div>
+
+    <script>
+        // Tab switching logic
+        function switchTab(tabId, element, isCenterBtn = false) {
+            // Update active state on nav items (except center button)
+            if (!isCenterBtn) {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                element.classList.add('active');
+            } else {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            }
+
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+                // Re-trigger animation by removing and adding class
+                const children = el.querySelectorAll('.slide-up');
+                children.forEach(child => {
+                    child.style.animation = 'none';
+                    child.offsetHeight; /* trigger reflow */
+                    child.style.animation = null; 
+                });
+            });
+
+            // Show selected tab
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        // Toast notification
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            
+            toast.classList.remove('opacity-0', '-translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-4');
+            }, 2500);
+        }
+
+        // Open/Close Video Player
+        function openPlayer() {
+            document.getElementById('page-player').classList.remove('hidden', 'translate-x-full');
+            // Hide bottom nav when player is open
+            document.querySelector('.glass-nav').style.transform = 'translateY(100%)';
+            document.querySelector('.glass-nav').style.transition = 'transform 0.3s';
+        }
+
+        function closePlayer() {
+            document.getElementById('page-player').classList.add('translate-x-full');
+            // Show bottom nav
+            document.querySelector('.glass-nav').style.transform = 'translateY(0)';
+            setTimeout(() => {
+                document.getElementById('page-player').classList.add('hidden');
+            }, 300);
+        }
+    </script>
+</body>
+</html>

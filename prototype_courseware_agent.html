@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>培训课件智能体 - 数智培训中心后台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --sidebar-bg: #ffffff;
+            --sidebar-active-bg: #eef2ff;
+        }
+
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        .panel { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+        /* --- Sidebar --- */
+        .sidebar-nav { width: 260px; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: 2px 0 8px rgba(0,0,0,0.02); z-index: 10; }
+        .menu-list { list-style: none; padding: 0; margin: 0; width: 100%; }
+        .menu-group { border-bottom: 1px solid transparent; }
+        .menu-title { display: flex; align-items: center; padding: 14px 20px; cursor: pointer; color: #334155; font-weight: 500; transition: all 0.2s ease; user-select: none; }
+        .menu-title:hover { color: var(--primary); background-color: #f8fafc; }
+        .menu-title .icon { width: 18px; height: 18px; margin-right: 10px; flex-shrink: 0; }
+        .menu-title .chevron { width: 14px; height: 14px; margin-left: auto; color: #94a3b8; transition: transform 0.3s; }
+        .menu-group.open .menu-title .chevron { transform: rotate(180deg); }
+        .menu-group.open .menu-title { color: var(--primary); }
+        .sub-menu-list { max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1); background-color: #fafafa; }
+        .menu-group.open .sub-menu-list { max-height: 300px; }
+        .sub-menu-item { padding: 10px 20px 10px 48px; font-size: 13px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; transition: all 0.2s; border-right: 3px solid transparent; }
+        .sub-menu-item:hover { color: var(--primary); }
+        .sub-menu-item.active { background-color: var(--sidebar-active-bg); color: var(--primary); font-weight: 600; }
+        .badge-dev { font-size: 10px; font-weight: normal; background-color: var(--sidebar-active-bg); color: #94a3b8; padding: 2px 6px; border-radius: 10px; border: 1px solid #e2e8f0; margin-left: 8px; flex-shrink: 0; }
+
+        /* Main Content */
+        .page-view { display: none !important; height: 100%; }
+        .page-view.active { display: flex !important; animation: fadeIn 0.3s ease; }
+        .hidden { display: none !important; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .btn-primary { background-color: var(--primary); color: white; border-radius: 6px; padding: 8px 16px; font-weight: 500; transition: background-color 0.2s; cursor: pointer; border: none; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-outline { border: 1px solid var(--border-color); background: white; color: var(--text-main); border-radius: 6px; padding: 8px 16px; font-weight: 500; transition: all 0.2s; cursor: pointer; }
+        .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Toast */
+        #toast { position: fixed; top: 20px; right: 20px; z-index: 100; background: white; border-left: 4px solid #10b981; border-radius: 4px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 16px; display: none; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        #toast.show { display: block; transform: translateX(0); animation: slideIn 0.3s forwards; }
+        @keyframes slideIn { to { transform: translateX(0); } }
+
+        /* Outline Tree */
+        .outline-node { border-left: 2px solid #e2e8f0; margin-left: 8px; padding-left: 16px; position: relative; margin-bottom: 12px; }
+        .outline-node::before { content: ''; position: absolute; left: -2px; top: 12px; width: 12px; height: 2px; background: #e2e8f0; }
+        .outline-input { width: 100%; border: 1px solid transparent; padding: 6px 10px; border-radius: 4px; transition: all 0.2s; outline: none; }
+        .outline-input:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1); }
+        .outline-input:hover:not(:focus) { border-color: #e2e8f0; background: #f8fafc; }
+        .node-actions { opacity: 0; transition: opacity 0.2s; }
+        .outline-node-wrapper:hover .node-actions { opacity: 1; }
+
+        /* Outline Library Drawer */
+        .outline-library {
+            position: absolute; right: 0; top: 0; bottom: 0; width: 320px;
+            background: white; border-left: 1px solid var(--border-color);
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 20; box-shadow: -4px 0 15px rgba(0,0,0,0.05); display: flex; flex-direction: column;
+        }
+        .outline-library.open { transform: translateX(0); }
+        .outline-card {
+            border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;
+            margin-bottom: 10px; cursor: pointer; transition: all 0.2s; position: relative;
+        }
+        .outline-card:hover { border-color: var(--primary); background-color: #f0f9ff; }
+        .outline-card-actions {
+            position: absolute; right: 12px; top: 12px; display: flex; gap: 4px;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .outline-card:hover .outline-card-actions { opacity: 1; }
+        .action-btn { padding: 4px; border-radius: 4px; color: #94a3b8; transition: all 0.2s; }
+        .action-btn:hover { background: #e0f2fe; color: var(--primary); }
+        .action-btn.delete:hover { background: #fee2e2; color: #ef4444; }
+
+        /* PPT Library Drawer */
+        .ppt-library {
+            position: absolute; right: 0; top: 0; bottom: 0; width: 340px;
+            background: white; border-left: 1px solid var(--border-color);
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 20; box-shadow: -4px 0 15px rgba(0,0,0,0.05); display: flex; flex-direction: column;
+        }
+        .ppt-library.open { transform: translateX(0); }
+        .ppt-card {
+            border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;
+            margin-bottom: 12px; cursor: pointer; transition: all 0.2s; position: relative;
+        }
+        .ppt-card:hover { border-color: var(--primary); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .ppt-card-thumb { height: 100px; background-size: cover; background-position: center; border-bottom: 1px solid var(--border-color); }
+        .ppt-card-info { padding: 10px 12px; background: white; }
+
+        /* AI Generating Overlay */
+        .ai-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.9); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .ai-overlay.active { opacity: 1; pointer-events: auto; }
+        .spinner { border: 3px solid #f3f4f6; border-top: 3px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Slide Thumbnail */
+        .slide-thumb { aspect-ratio: 16/9; border: 2px solid transparent; transition: all 0.2s; cursor: pointer; position: relative; }
+        .slide-thumb.active { border-color: var(--primary); box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.2); }
+        .slide-thumb:hover:not(.active) { border-color: #cbd5e1; }
+        
+        /* Canvas */
+        .ppt-canvas { aspect-ratio: 16/9; background: white; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); position: relative; overflow: hidden; border: 1px solid #e2e8f0; }
+        .editable-element { position: absolute; border: 1px dashed transparent; padding: 4px; transition: all 0.2s; cursor: text; }
+        .editable-element:hover { border-color: #94a3b8; background: rgba(255,255,255,0.5); }
+        .editable-element:focus { outline: none; border-color: var(--primary); background: white; }
+
+        /* Save Modal */
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+        .modal-backdrop.active { display: flex; opacity: 1; }
+        .modal-content { background: white; border-radius: 8px; width: 420px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); transform: scale(0.95); transition: transform 0.2s; }
+        .modal-backdrop.active .modal-content { transform: scale(1); }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center relative z-[100] shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-500 rounded flex items-center justify-center text-white font-bold shadow-sm">AI</div>
+            <h1 class="text-lg font-bold text-gray-800">数智培训中心</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="text-gray-500 hover:text-blue-600 relative">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            <div class="relative group">
+                <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 py-1 px-2 rounded" id="role-selector-btn">
+                    <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm" id="role-avatar">营</div>
+                    <span class="text-sm font-medium text-gray-700" id="role-name">营业员</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <!-- Role Dropdown -->
+                <div class="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 hidden group-hover:block z-[999]">
+                    <div class="px-4 py-2 border-b border-gray-100">
+                        <p class="text-xs text-gray-500 font-medium">切换角色视图</p>
+                    </div>
+                    <div class="px-2 py-1 cursor-pointer hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2" onclick="switchRole('student')">
+                        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">营</div>
+                        营业员 (学员端)
+                    </div>
+                    <div class="px-2 py-1 cursor-pointer hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2" onclick="switchRole('admin')">
+                        <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">管</div>
+                        系统管理员 (管理端)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 z-10 shadow-sm overflow-y-auto">
+            <div class="p-4">
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">系统业务模块导航</div>
+            </div>
+            
+            <ul class="menu-list" id="main-sidebar">
+                <!-- Group 1 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        <span class="text-[14px]">数字人形象定制</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_digital_human_modeling.html#page-modeling'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                            数字人建模
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_digital_human_modeling.html#page-customization'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                            数字讲师形象定制
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_digital_human_modeling.html#page-assets'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            讲师资产库
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Group 2 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span class="text-[14px]">培训课件智能体</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="switchPage('page-outline', this)">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                            PPT大纲智能生成
+                        </div>
+                        <div class="sub-menu-item" onclick="switchPage('page-ppt', this)">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            PPT智能生成
+                        </div>
+                        <div class="sub-menu-item" onclick="switchPage('page-ppt-library', this)">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            PPT课件资源库
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Group 3 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span class="text-[14px]">数字讲师课堂</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_digital_classroom.html#page-video-editor'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            视频课堂制作
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_digital_classroom.html#page-video-library'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            视频课程资源库
+                        </div>
+                    </div>
+                </li>
+                
+                <!-- Group 4 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span class="text-[14px]">课堂审核及发布</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_course_review.html#page-review'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                            内容审核
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_course_review.html#page-publish'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                            发布管理
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Group 5 (Active) -->
+                <li class="menu-group">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span class="text-[14px]">交互式培训课堂</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_interactive_classroom.html#page-dashboard'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            学习进度看板
+                        </div>
+                        <div class="sub-menu-item student-only" style="display: none;" onclick="window.location.href='prototype_interactive_classroom.html#page-progress'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            专属学习路径
+                        </div>
+                        <div class="sub-menu-item admin-only" style="display: none;" onclick="window.location.href='prototype_interactive_classroom.html#page-path-config'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            学习路径配置
+                        </div>
+                    </div>
+                </li>
+
+                <!-- Group 6 -->
+                <li class="menu-group">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <span class="text-[14px]">AI伴学智能体</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_ai_companion.html#page-ai-companion'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                            智能伴学助手
+                        </div>
+                    </div>
+                </li>
+            
+                <!-- Group 7 -->
+                <li class="menu-group admin-only" style="display: none;">
+                    <div class="menu-title" onclick="toggleMenu(this)">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span class="text-[14px]">系统设置</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sub-menu-list">
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_system_management.html#page-user-management'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                            用户管理
+                        </div>
+                        <div class="sub-menu-item" onclick="window.location.href='prototype_system_management.html#page-role-management'">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                            角色管理
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- --- PAGE 1: PPT大纲智能生成 --- -->
+        <main id="page-outline" class="page-view active flex-1 flex overflow-hidden bg-slate-50 p-6 gap-6">
+            
+            <!-- Left Config -->
+            <div class="w-[35%] flex flex-col gap-4 h-full">
+                <div class="panel p-5 flex-1 flex flex-col overflow-y-auto">
+                    <h2 class="font-bold text-gray-800 mb-5 text-lg">大纲生成配置</h2>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">1. 输入培训主题或核心提示词</label>
+                        <textarea id="prompt-input" rows="4" class="w-full border border-gray-300 rounded-md p-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" placeholder="例如：请为新入职营业员生成一份关于《国家电网营业厅服务规范与基础礼仪》的培训PPT大纲，包含仪容仪表、迎送服务、沟通技巧等重点。"></textarea>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">2. 关联企业知识库 (RAG增强)</label>
+                        <p class="text-xs text-gray-500 mb-3 leading-relaxed">系统将调用大语言模型解析上述提示词，并结合关联的内部知识文档生成准确、专业的大纲。</p>
+                        
+                        <!-- Simulated selected files -->
+                        <div class="space-y-2 mb-3">
+                            <div class="flex items-center justify-between bg-blue-50 border border-blue-100 p-2.5 rounded text-sm">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+                                    <span class="text-blue-800">国网营业厅服务规范_2024版.doc</span>
+                                </div>
+                                <button class="text-blue-400 hover:text-red-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                            </div>
+                        </div>
+                        
+                        <button class="w-full py-2 border-2 border-dashed border-gray-300 rounded text-gray-500 text-sm hover:border-blue-500 hover:text-blue-500 transition flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            从知识库添加参考文档
+                        </button>
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-gray-100">
+                        <button class="btn-primary w-full py-3 flex items-center justify-center gap-2 shadow-md shadow-blue-500/20" onclick="generateOutline()">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            智能生成结构化大纲
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Outline Editor -->
+            <div class="panel flex-1 flex flex-col relative overflow-hidden">
+                <!-- AI Overlay -->
+                <div id="outline-loading" class="ai-overlay">
+                    <div class="spinner mb-4"></div>
+                    <h3 class="text-lg font-medium text-gray-800">大模型正在解析知识库...</h3>
+                    <p class="text-sm text-gray-500 mt-2" id="outline-loading-text">正在提取服务规范核心要点</p>
+                </div>
+
+                <div class="px-5 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center z-10">
+                    <div class="flex items-center gap-3">
+                        <h2 class="font-bold text-gray-800">大纲在线调整视图</h2>
+                        <span class="text-xs text-gray-500 bg-white px-2 py-1 border border-gray-200 rounded shadow-sm">自动保存已开启</span>
+                    </div>
+                    <button class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium" onclick="toggleLibrary()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        大纲资源库
+                    </button>
+                </div>
+
+                <div class="flex-1 p-6 overflow-y-auto bg-white" id="outline-empty">
+                    <div class="h-full flex flex-col items-center justify-center text-gray-400">
+                        <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <p>请在左侧输入提示词并点击生成</p>
+                    </div>
+                </div>
+
+                <div class="flex-1 p-8 overflow-y-auto bg-white hidden" id="outline-editor">
+                    <!-- Tree Editor -->
+                    <div class="max-w-3xl mx-auto">
+                        <h1 class="text-2xl font-bold text-gray-900 mb-6 border-b pb-4 outline-input" contenteditable="true">国家电网营业厅服务规范与基础礼仪培训</h1>
+                        
+                        <!-- Section 1 -->
+                        <div class="outline-node-wrapper mb-6">
+                            <div class="flex items-center gap-2 mb-2 group">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">第一章</span>
+                                <input type="text" class="outline-input font-bold text-lg text-gray-800" value="营业员仪容仪表规范">
+                                <div class="node-actions flex gap-1 ml-auto">
+                                    <button class="p-1 text-gray-400 hover:text-blue-500" title="添加子节点"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
+                                    <button class="p-1 text-gray-400 hover:text-red-500" title="删除"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                                </div>
+                            </div>
+                            <div class="outline-node">
+                                <div class="flex items-center group">
+                                    <span class="w-2 h-2 bg-gray-300 rounded-full mr-2"></span>
+                                    <input type="text" class="outline-input text-gray-700 text-sm" value="着装标准：工装整洁、统一佩戴工牌">
+                                    <div class="node-actions flex gap-1 ml-auto">
+                                        <button class="p-1 text-gray-400 hover:text-red-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                                    </div>
+                                </div>
+                                <div class="flex items-center group">
+                                    <span class="w-2 h-2 bg-gray-300 rounded-full mr-2"></span>
+                                    <input type="text" class="outline-input text-gray-700 text-sm" value="仪容要求：淡妆上岗、发型整洁不夸张">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2 -->
+                        <div class="outline-node-wrapper mb-6">
+                            <div class="flex items-center gap-2 mb-2 group">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">第二章</span>
+                                <input type="text" class="outline-input font-bold text-lg text-gray-800" value="迎送服务与接待标准">
+                            </div>
+                            <div class="outline-node">
+                                <div class="flex items-center group">
+                                    <span class="w-2 h-2 bg-gray-300 rounded-full mr-2"></span>
+                                    <input type="text" class="outline-input text-gray-700 text-sm" value="主动问候：“您好，请问有什么可以帮您？”">
+                                </div>
+                                <div class="flex items-center group">
+                                    <span class="w-2 h-2 bg-gray-300 rounded-full mr-2"></span>
+                                    <input type="text" class="outline-input text-gray-700 text-sm" value="站立服务规范与手势指引">
+                                </div>
+                                <div class="flex items-center group">
+                                    <span class="w-2 h-2 bg-gray-300 rounded-full mr-2"></span>
+                                    <input type="text" class="outline-input text-gray-700 text-sm" value="双手递送票据与微笑送别">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="mt-4 w-full py-3 border border-dashed border-blue-300 text-blue-500 rounded bg-blue-50/50 hover:bg-blue-50 text-sm flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            添加新章节
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-5 py-3 border-t border-gray-200 bg-gray-50 flex justify-between items-center z-10" id="outline-actions" style="display: none;">
+                    <div class="text-xs text-gray-500 flex items-center gap-1">
+                        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        自动保存草稿
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="btn-outline" onclick="openSaveModal('outline')">保存至资源库</button>
+                        <button class="btn-primary" onclick="openSaveModal('outline_to_ppt')">去生成PPT →</button>
+                    </div>
+                </div>
+
+                <!-- Right Side Library Drawer -->
+                <div class="outline-library" id="outline-library">
+                    <div class="px-5 py-4 border-b border-gray-200 flex flex-col gap-3 bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-gray-800 text-sm">企业大纲资源库</h3>
+                            <button class="text-gray-400 hover:text-gray-600" onclick="toggleLibrary()">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-3 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            <input type="text" class="w-full border border-gray-300 rounded pl-9 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="搜索历史大纲名称...">
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 bg-white" id="library-list">
+                        <!-- Card 1 -->
+                        <div class="outline-card border-blue-500 bg-blue-50 group">
+                            <div class="outline-card-actions">
+                                <button class="action-btn" title="编辑大纲" onclick="editOutline(event, this)"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                                <button class="action-btn delete" title="删除大纲" onclick="deleteOutline(event, this)"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                            </div>
+                            <h4 class="font-bold text-gray-800 text-sm mb-1 pr-14 truncate">国家电网营业厅服务规范...</h4>
+                            <p class="text-xs text-gray-500 mb-2">包含 5 个章节 · 24 个子节点</p>
+                            <div class="flex justify-between items-center mt-1">
+                                <span class="text-[10px] text-gray-400">刚刚生成</span>
+                                <span class="text-[11px] font-medium text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">当前使用中</span>
+                            </div>
+                        </div>
+                        <!-- Card 2 -->
+                        <div class="outline-card group">
+                            <div class="outline-card-actions">
+                                <button class="action-btn" title="编辑大纲" onclick="editOutline(event, this)"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                                <button class="action-btn delete" title="删除大纲" onclick="deleteOutline(event, this)"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                            </div>
+                            <h4 class="font-bold text-gray-800 text-sm mb-1 pr-14 truncate">2024新员工入职安全培训</h4>
+                            <p class="text-xs text-gray-500 mb-2">包含 3 个章节 · 18 个子节点</p>
+                            <div class="flex justify-between items-center mt-1">
+                                <span class="text-[10px] text-gray-400">2天前</span>
+                                <button class="text-xs text-blue-500 hover:text-blue-700 font-medium" onclick="useOutline(this)">调用大纲</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- --- PAGE 2: PPT智能生成 --- -->
+        <main id="page-ppt" class="page-view flex-1 flex flex-col bg-slate-50 overflow-hidden">
+            
+            <!-- Top Config Bar -->
+            <div class="bg-white border-b border-gray-200 px-6 py-4 shrink-0 shadow-sm z-10">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-6">
+                        <div>
+                            <h2 class="font-bold text-gray-800 text-lg">PPT智能生成与图文二次优化</h2>
+                            <p class="text-xs text-gray-500 mt-1">请选取大纲并配置模板，一键生成幻灯片</p>
+                        </div>
+                        <div class="h-10 w-px bg-gray-200 mx-2"></div>
+                        <div class="flex items-center gap-6">
+                            <!-- 选取大纲下拉框 -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-medium text-gray-700 whitespace-nowrap">1. 选取生成大纲:</span>
+                                <select class="border border-blue-300 bg-blue-50 text-blue-800 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500 min-w-[200px]">
+                                    <option>国家电网营业厅服务规范...</option>
+                                    <option>2024新员工入职安全培训...</option>
+                                    <option>营销系统V3.0操作手册...</option>
+                                </select>
+                            </div>
+                            
+                            <div class="h-6 w-px bg-gray-200 mx-1"></div>
+
+                            <!-- 模板风格下拉框 -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-medium text-gray-700 whitespace-nowrap">2. 模板风格:</span>
+                                <select class="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500 min-w-[160px]">
+                                    <option>国网标准蓝 (企业风)</option>
+                                    <option>活力扁平 (现代风)</option>
+                                    <option>稳重深色 (汇报风)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button class="btn-primary shadow-lg shadow-blue-500/30 flex items-center gap-2 shrink-0" onclick="generatePPT()">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                            一键智能生成
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Canvas Area -->
+            <div class="flex-1 flex overflow-hidden relative">
+                <!-- AI Overlay -->
+                <div id="ppt-loading" class="ai-overlay">
+                    <div class="spinner mb-4"></div>
+                    <h3 class="text-xl font-bold text-gray-800">大模型结合企业模板生成中...</h3>
+                    <p class="text-sm text-gray-500 mt-2" id="ppt-loading-text">正在进行图文智能排版 (2/8)</p>
+                    <div class="w-64 bg-gray-200 rounded-full h-1.5 mt-4">
+                        <div class="bg-blue-500 h-1.5 rounded-full w-1/3 transition-all duration-500" id="ppt-progress-bar"></div>
+                    </div>
+                </div>
+
+                <!-- Empty State before generation -->
+                <div id="ppt-empty" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-slate-50 z-0">
+                    <svg class="w-20 h-20 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <p class="text-lg font-medium text-gray-500">请点击右上角“一键智能生成”</p>
+                </div>
+
+                <!-- Generated Workspace (Hidden initially) -->
+                <div id="ppt-workspace" class="flex-1 flex hidden">
+                    <!-- Left Thumbnails -->
+                    <div class="w-64 bg-gray-100 border-r border-gray-200 overflow-y-auto p-4 space-y-4 flex-shrink-0">
+                        <!-- Thumb 1 -->
+                        <div class="group relative">
+                            <span class="absolute -left-2 top-2 text-xs text-gray-400 font-medium">1</span>
+                            <div class="slide-thumb active bg-white rounded flex items-center justify-center">
+                                <div class="text-[8px] font-bold text-center">国家电网<br>营业厅服务规范</div>
+                            </div>
+                        </div>
+                        <!-- Thumb 2 -->
+                        <div class="group relative">
+                            <span class="absolute -left-2 top-2 text-xs text-gray-400 font-medium">2</span>
+                            <div class="slide-thumb bg-white rounded flex flex-col p-2">
+                                <div class="h-1 bg-blue-500 w-1/2 mb-1"></div>
+                                <div class="flex-1 flex gap-1 mt-1">
+                                    <div class="w-1/3 bg-gray-200"></div>
+                                    <div class="flex-1 flex flex-col gap-0.5">
+                                        <div class="h-0.5 bg-gray-300 w-full"></div>
+                                        <div class="h-0.5 bg-gray-300 w-4/5"></div>
+                                        <div class="h-0.5 bg-gray-300 w-5/6"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Thumb 3 -->
+                        <div class="group relative">
+                            <span class="absolute -left-2 top-2 text-xs text-gray-400 font-medium">3</span>
+                            <div class="slide-thumb bg-white rounded p-2">
+                                <div class="h-1 bg-blue-500 w-1/3 mb-2"></div>
+                                <div class="grid grid-cols-3 gap-1 h-3/4">
+                                    <div class="bg-gray-200"></div>
+                                    <div class="bg-gray-200"></div>
+                                    <div class="bg-gray-200"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Center Canvas -->
+                    <div class="flex-1 bg-slate-200 flex flex-col overflow-hidden relative">
+                        <!-- Toolbar -->
+                        <div class="h-12 bg-white border-b border-gray-200 flex items-center px-4 justify-between shrink-0 shadow-sm z-10 relative">
+                            <!-- Basic PPT Tools -->
+                            <div class="flex items-center gap-2">
+                                <button class="p-2 rounded hover:bg-gray-100 text-gray-600 transition-colors flex items-center gap-1 text-xs font-medium" title="插入文本框" onclick="showToast('点击画布即可插入新文本框')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                                    文本
+                                </button>
+                                <button class="p-2 rounded hover:bg-gray-100 text-gray-600 transition-colors flex items-center gap-1 text-xs font-medium" title="插入图片" onclick="showToast('打开本地文件浏览器选择图片')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    图片
+                                </button>
+                                <button class="p-2 rounded hover:bg-gray-100 text-gray-600 transition-colors flex items-center gap-1 text-xs font-medium" title="插入形状" onclick="showToast('选择矩形、圆形、箭头等基础形状')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
+                                    形状
+                                </button>
+                                <div class="w-px h-5 bg-gray-300 mx-1"></div>
+                                <button class="p-2 rounded hover:bg-gray-100 text-gray-600 transition-colors" title="撤销">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                                </button>
+                                <button class="p-2 rounded hover:bg-gray-100 text-gray-600 transition-colors" title="重做">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"></path></svg>
+                                </button>
+                            </div>
+
+                            <!-- AI & Layout Tools -->
+                            <div class="flex items-center gap-4">
+                                <div class="relative group">
+                                    <button class="text-xs font-medium border border-gray-300 rounded px-3 py-1.5 cursor-pointer hover:bg-gray-50 flex items-center gap-1" onclick="showToast('已切换为 4:3 演示比例')">
+                                        16:9
+                                        <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 overflow-auto p-8 flex items-center justify-center bg-slate-200">
+                            <!-- PPT Slide Preview (Simulated) -->
+                            <div id="ppt-canvas-board" class="ppt-canvas w-full max-w-4xl rounded bg-white transition-all duration-500" style="background-image: linear-gradient(120deg, #f0f9ff 0%, #ffffff 100%);">
+                                <!-- Design Elements -->
+                                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-bl-full opacity-10"></div>
+                                <div class="absolute bottom-8 left-12 w-2 h-16 bg-green-500"></div>
+                                
+                                <!-- Content -->
+                                <div class="absolute inset-0 p-16 flex flex-col justify-center">
+                                    <div class="editable-element text-blue-600 font-bold tracking-widest text-sm mb-4" style="top: 100px; left: 60px;" contenteditable="true">国家电网员工内部培训课件</div>
+                                    <div class="editable-element text-5xl font-bold text-gray-800 leading-tight mb-6" style="top: 150px; left: 60px;" contenteditable="true">
+                                        营业厅服务规范<br>与基础礼仪
+                                    </div>
+                                    <div class="editable-element text-xl text-gray-500 mb-12" style="top: 280px; left: 60px;" contenteditable="true">
+                                        打造专业、亲切的国网服务形象
+                                    </div>
+                                    
+                                    <div class="absolute bottom-16 left-16 flex items-center gap-4">
+                                        <div class="w-12 h-12 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow flex items-center justify-center bg-green-600 text-white font-bold text-xs">
+                                            SGCC
+                                        </div>
+                                        <div class="editable-element text-sm text-gray-500 font-medium" contenteditable="true">2024 年度培训专属</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer actions -->
+                        <div class="h-16 bg-white border-t border-gray-200 flex items-center justify-between px-6 gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                            <div class="text-xs text-gray-500 flex items-center gap-1">
+                                <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                自动保存已开启
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button class="btn-outline text-sm" onclick="openSaveModal('export_pptx')">导出为 PPTX</button>
+                                <button class="btn-primary text-sm flex items-center gap-2" onclick="openSaveModal('ppt')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                                    保存课件至资源库
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- --- PAGE 3: PPT课件资源库 --- -->
+        <main id="page-ppt-library" class="page-view flex-1 flex flex-col bg-slate-50 overflow-hidden">
+            <!-- Header with Search -->
+            <div class="bg-white border-b border-gray-200 px-6 py-4 shrink-0 shadow-sm z-10 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div>
+                        <h2 class="font-bold text-gray-800 text-lg">PPT课件资源库</h2>
+                        <p class="text-xs text-gray-500 mt-1">管理和调用企业已生成的培训课件</p>
+                    </div>
+                </div>
+                <div class="relative w-80">
+                    <svg class="w-4 h-4 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" class="w-full border border-gray-300 rounded pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="按课件名称搜索...">
+                </div>
+            </div>
+
+            <!-- Grid Content -->
+            <div class="flex-1 p-6 overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="ppt-grid">
+                    
+                    <!-- Card 1 -->
+                    <div class="panel overflow-hidden group hover:border-blue-500 transition-all duration-300 relative shadow-sm hover:shadow-md">
+                        <div class="h-40 bg-gray-100 relative" style="background-image: linear-gradient(120deg, #f0f9ff 0%, #ffffff 100%);">
+                            <div class="absolute inset-0 bg-blue-500 opacity-5"></div>
+                            <div class="w-full h-full flex items-center justify-center relative">
+                                <span class="text-sm font-bold text-gray-800 text-center px-4">国家电网营业厅服务规范</span>
+                            </div>
+                            <!-- Overlay actions on hover -->
+                            <div class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                <button class="w-9 h-9 rounded-full bg-white text-gray-700 hover:text-blue-500 flex items-center justify-center shadow-sm transform scale-75 group-hover:scale-100 transition-all duration-200 delay-75" title="预览课件" onclick="previewPPT()">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                </button>
+                                <button class="w-9 h-9 rounded-full bg-white text-gray-700 hover:text-blue-500 flex items-center justify-center shadow-sm transform scale-75 group-hover:scale-100 transition-all duration-200 delay-100" title="二次编辑" onclick="editPPT()">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </button>
+                                <button class="w-9 h-9 rounded-full bg-white text-gray-700 hover:text-green-500 flex items-center justify-center shadow-sm transform scale-75 group-hover:scale-100 transition-all duration-200 delay-150" title="下载PPT" onclick="downloadPPT()">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                </button>
+                                <button class="w-9 h-9 rounded-full bg-white text-gray-700 hover:text-red-500 flex items-center justify-center shadow-sm transform scale-75 group-hover:scale-100 transition-all duration-200 delay-200" title="删除" onclick="deletePPT(this)">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-bold text-gray-800 text-sm mb-2 truncate">国家电网营业厅服务规范与基础礼仪</h3>
+                            <p class="text-xs text-gray-500 mb-3">国网标准蓝 · 共 16 页</p>
+                            <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+                                <span class="text-xs text-gray-400">2024-05-12</span>
+                                <span class="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">系统管理员</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="panel overflow-hidden group hover:border-blue-500 transition-all duration-300 relative shadow-sm hover:shadow-md">
+                        <div class="h-40 bg-gray-100 relative" style="background-image: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);">
+                            <div class="w-full h-full flex items-center justify-center">
+                                <span class="text-sm font-bold text-gray-800">新员工安全培训</span>
+                            </div>
+                            <!-- Overlay actions on hover -->
+                            <div class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                <button class="w-9 h-9 rounded-full bg-white text-gray-700 hover:text-blue-500 flex items-center justify-center shadow-sm transform scale-75 group-hover:scale-100 transition-all duration-200 delay-75" title="预览课件" onclick="previewPPT()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
+                                <button class="w-9 h-9 rounded-full bg-white text-gray-700 hover:text-blue-500 flex items-center justify-center shadow-sm transform scale-75 group-hover:scale-100 transition-all duration-200 delay-100" title="二次编辑" onclick="editPPT()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
+                                <button class="w-9 h-9 rounded-full bg-white text-gray-700 hover:text-green-500 flex items-center justify-center shadow-sm transform scale-75 group-hover:scale-100 transition-all duration-200 delay-150" title="下载PPT" onclick="downloadPPT()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></button>
+                                <button class="w-9 h-9 rounded-full bg-white text-gray-700 hover:text-red-500 flex items-center justify-center shadow-sm transform scale-75 group-hover:scale-100 transition-all duration-200 delay-200" title="删除" onclick="deletePPT(this)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-bold text-gray-800 text-sm mb-2 truncate">2024新员工入职安全培训</h3>
+                            <p class="text-xs text-gray-500 mb-3">活力扁平风 · 共 24 页</p>
+                            <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+                                <span class="text-xs text-gray-400">2天前</span>
+                                <span class="text-[11px] font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded">张讲师</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast">
+        <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <span id="toast-msg" class="text-sm font-medium text-gray-800">操作成功</span>
+        </div>
+    </div>
+
+    <!-- Save Modal -->
+    <div id="save-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800 text-lg" id="modal-title">保存资产</h3>
+                <button class="text-gray-400 hover:text-gray-600" onclick="closeModal()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-sm text-gray-600" id="modal-desc">请为您的资产输入一个易于识别的名称。</p>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">资产名称 <span class="text-red-500">*</span></label>
+                    <input type="text" id="asset-name-input" class="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:border-blue-500" placeholder="例如：新员工安全培训大纲_V1">
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+                <button class="btn-outline text-sm py-1.5" onclick="closeModal()">取消</button>
+                <button class="btn-primary text-sm py-1.5" onclick="confirmSave()">确认保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation Logic ---
+        
+        // Define switchRole globally
+        function switchRole(role) {
+            localStorage.setItem('currentRole', role);
+            const roleName = document.getElementById('role-name');
+            const roleAvatar = document.getElementById('role-avatar');
+            
+            if(roleName && roleAvatar) {
+                if(role === 'student') {
+                    roleName.innerText = '营业员 (学员端)';
+                    roleAvatar.innerText = '营';
+                    roleAvatar.className = 'w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm';
+                    // Redirect to student page
+                    window.location.href = 'prototype_interactive_classroom.html';
+                } else {
+                    roleName.innerText = '系统管理员 (管理端)';
+                    roleAvatar.innerText = '管';
+                    roleAvatar.className = 'w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold text-sm';
+                }
+            }
+        }
+
+        function toggleMenu(element) {
+            const group = element.parentElement;
+            group.classList.toggle('open');
+        }
+
+        function switchPage(pageId, menuItem) {
+            document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) targetPage.classList.add('active');
+
+            document.querySelectorAll('.sub-menu-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.menu-group').forEach(g => g.classList.remove('open'));
+            document.querySelectorAll('.menu-title').forEach(t => t.classList.remove('active'));
+            
+            if(menuItem) {
+                menuItem.classList.add('active');
+                const group = menuItem.closest('.menu-group');
+                if (group) {
+                    group.classList.add('open');
+                    const title = group.querySelector('.menu-title');
+                    if (title) title.classList.add('active');
+                }
+            }
+            
+            if(window.history && window.history.pushState) window.history.pushState(null, '', `#${pageId}`);
+            if(pageId === 'page-dashboard' && typeof initCharts === 'function') setTimeout(initCharts, 100);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if(msg) document.getElementById('toast-msg').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // --- Save Modal Logic ---
+        let currentSaveType = ''; // 'outline' or 'ppt'
+
+        function openSaveModal(type) {
+            currentSaveType = type;
+            const modal = document.getElementById('save-modal');
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            const input = document.getElementById('asset-name-input');
+            
+            if (type === 'outline') {
+                title.innerText = '保存PPT大纲';
+                desc.innerText = '请为该大纲输入一个易于识别的名称，保存后可在“大纲资源库”中查看。';
+                input.placeholder = '例如：营业厅服务规范大纲_V1';
+            } else if (type === 'outline_to_ppt') {
+                title.innerText = '确认并生成 PPT';
+                desc.innerText = '在生成 PPT 之前，请先为当前的大纲命名并保存。';
+                input.placeholder = '例如：营业厅服务规范大纲_最终版';
+            } else if (type === 'export_pptx') {
+                title.innerText = '导出为 PPTX';
+                desc.innerText = '请输入导出的 PPT 文件名称，系统将为您生成可编辑的源文件。';
+                input.placeholder = '例如：营业厅服务规范_国网蓝_导出';
+            } else {
+                title.innerText = '保存PPT课件';
+                desc.innerText = '请为该生成的PPT课件命名，保存后可在“PPT课件资源库”中统一管理。';
+                input.placeholder = '例如：营业厅服务规范_蓝版_定稿';
+            }
+            
+            input.value = '';
+            modal.classList.add('active');
+            input.focus();
+        }
+
+        function closeModal() {
+            document.getElementById('save-modal').classList.remove('active');
+        }
+
+        function confirmSave() {
+            const input = document.getElementById('asset-name-input').value.trim();
+            if(!input) {
+                alert('请输入资产名称');
+                return;
+            }
+
+            closeModal();
+            
+            if (currentSaveType === 'outline') {
+                showToast(`大纲 [${input}] 保存成功！已归档至企业资源库。`);
+                // Optional: You could simulate adding a new card to the outline library here
+            } else if (currentSaveType === 'outline_to_ppt') {
+                showToast(`大纲 [${input}] 已保存！正在前往配置并生成 PPT...`);
+                setTimeout(() => {
+                    const pptMenuItem = document.getElementById('menu-ppt');
+                    switchPage('page-ppt', pptMenuItem);
+                }, 800);
+            } else if (currentSaveType === 'export_pptx') {
+                showToast(`正在生成并下载 [${input}.pptx]，请稍候...`);
+            } else {
+                showToast(`PPT课件 [${input}] 保存成功！正在跳转至课件资源库...`);
+                setTimeout(() => {
+                    const libMenuItem = document.getElementById('menu-ppt-library');
+                    switchPage('page-ppt-library', libMenuItem);
+                }, 1000);
+            }
+        }
+
+        // --- Outline Generation Logic ---
+        function toggleLibrary() {
+            document.getElementById('outline-library').classList.toggle('open');
+        }
+
+        function saveOutlineToLibrary() {
+            showToast('大纲保存成功！已归档至企业资源库。');
+        }
+
+        function editOutline(e, btn) {
+            e.stopPropagation();
+            showToast('已加载该历史大纲内容，可直接在左侧进行编辑。');
+        }
+
+        function deleteOutline(e, btn) {
+            e.stopPropagation();
+            if(confirm('确认要从企业资源库中删除该大纲吗？此操作不可逆。')) {
+                const card = btn.closest('.outline-card');
+                if(card) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        card.remove();
+                        showToast('历史大纲已删除。');
+                    }, 200);
+                }
+            }
+        }
+
+        function useOutline(btn) {
+            // 获取当前大纲名称并跳转到 PPT 生成页
+            const card = btn.closest('.outline-card');
+            const title = card.querySelector('h4').innerText;
+            
+            // 关闭抽屉
+            document.getElementById('outline-library').classList.remove('open');
+            
+            // 切换到 PPT 智能生成页面
+            const pptMenuItem = document.getElementById('menu-ppt');
+            switchPage('page-ppt', pptMenuItem);
+            
+            // 模拟将下拉框选中为该大纲
+            const selectEl = document.querySelector('#page-ppt select');
+            selectEl.options[0].text = title; // 直接替换第一个选项的文字模拟选中
+            selectEl.selectedIndex = 0;
+            
+            showToast(`已调用大纲《${title}》，请配置模板后生成 PPT。`);
+        }
+
+        function generateOutline() {
+            const input = document.getElementById('prompt-input').value;
+            if(!input) {
+                alert('请先输入培训主题或提示词');
+                return;
+            }
+
+            const overlay = document.getElementById('outline-loading');
+            const textEl = document.getElementById('outline-loading-text');
+            const emptyState = document.getElementById('outline-empty');
+            const editorState = document.getElementById('outline-editor');
+            const actions = document.getElementById('outline-actions');
+
+            overlay.classList.add('active');
+            editorState.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            actions.style.display = 'none';
+
+            // Simulate steps
+            setTimeout(() => textEl.innerText = "正在检索知识库文档...", 800);
+            setTimeout(() => textEl.innerText = "大模型生成结构化大纲中...", 1600);
+            
+            setTimeout(() => {
+                overlay.classList.remove('active');
+                editorState.classList.remove('hidden');
+                actions.style.display = 'flex';
+                showToast('大纲智能生成完毕，可在线调整');
+            }, 2500);
+        }
+
+        function proceedToPPT() {
+            // Switch to PPT page automatically
+            const pptMenuItem = document.getElementById('menu-ppt');
+            switchPage('page-ppt', pptMenuItem);
+            showToast('大纲已同步，请配置风格并生成PPT');
+        }
+
+        // --- PPT Generation Logic ---
+        function generatePPT() {
+            const overlay = document.getElementById('ppt-loading');
+            const textEl = document.getElementById('ppt-loading-text');
+            const bar = document.getElementById('ppt-progress-bar');
+            const emptyState = document.getElementById('ppt-empty');
+            const workspace = document.getElementById('ppt-workspace');
+
+            overlay.classList.add('active');
+            emptyState.classList.add('hidden');
+            workspace.classList.add('hidden');
+
+            // Simulate generation steps
+            let progress = 10;
+            bar.style.width = progress + '%';
+            textEl.innerText = "正在匹配对应风格模板 (1/3)...";
+
+            setTimeout(() => {
+                progress = 45;
+                bar.style.width = progress + '%';
+                textEl.innerText = "结合大模型进行图文排版 (2/3)...";
+            }, 1200);
+
+            setTimeout(() => {
+                progress = 90;
+                bar.style.width = progress + '%';
+                textEl.innerText = "渲染幻灯片画面 (3/3)...";
+            }, 2400);
+
+            setTimeout(() => {
+                progress = 100;
+                bar.style.width = progress + '%';
+                overlay.classList.remove('active');
+                workspace.classList.remove('hidden');
+                showToast('PPT 一键生成成功！请二次检查优化');
+            }, 3200);
+        }
+
+        // --- PPT Library Actions ---
+        function previewPPT() {
+            showToast('打开PPT全屏预览视图...');
+        }
+
+        function editPPT() {
+            showToast('正在加载课件，准备二次编辑...');
+            setTimeout(() => {
+                const pptMenuItem = document.getElementById('menu-ppt');
+                switchPage('page-ppt', pptMenuItem);
+            }, 800);
+        }
+
+        function downloadPPT() {
+            showToast('正在生成 PPTX 文件，请稍候...');
+            setTimeout(() => {
+                showToast('下载已开始！');
+            }, 1000);
+        }
+
+        function deletePPT(btn) {
+            if(confirm('确认要删除该PPT课件吗？此操作不可逆。')) {
+                const card = btn.closest('.panel');
+                if(card) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        card.remove();
+                        showToast('PPT课件已删除。');
+                    }, 200);
+                }
+            }
+        }
+
+        // Check hash on load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.location.hash === '#page-ppt') {
+                const pptMenuItem = document.getElementById('menu-ppt');
+                switchPage('page-ppt', pptMenuItem);
+            }
+        });
+    </script>
+
+    
+    <script>
+        
+        // Enhance sidebar links to switch role before navigation
+        document.addEventListener('click', (e) => {
+            // If the user clicks on any element inside an .admin-only container, or the container itself
+            if (e.target.closest('.admin-only') || e.target.closest('[onclick*="modeling"]') || e.target.closest('[onclick*="courseware"]') || e.target.closest('[onclick*="digital_classroom"]') || e.target.closest('[onclick*="course_review"]')) {
+                localStorage.setItem('currentRole', 'admin');
+            }
+        }, true); // Use capture phase to ensure this runs before the actual click handler (e.g. window.location.href)
+
+                // Persist role across page loads and apply UI changes
+        document.addEventListener('DOMContentLoaded', () => {
+            let savedRole = localStorage.getItem('currentRole') || 'student';
+            const path = window.location.pathname;
+            const isAdminPage = path.includes('modeling') || 
+                                path.includes('courseware') || 
+                                path.includes('digital_classroom') || 
+                                path.includes('course_review') || 
+                                path.includes('system_management');
+            
+            if (isAdminPage) {
+                localStorage.setItem('currentRole', 'admin');
+                savedRole = 'admin';
+            }
+
+            const adminMenus = document.querySelectorAll('.admin-only');
+            const studentMenus = document.querySelectorAll('.student-only');
+            
+            if(savedRole === 'student') {
+                adminMenus.forEach(el => el.style.display = 'none');
+                studentMenus.forEach(el => {
+                    if(el.classList.contains('menu-group')) {
+                        el.style.display = 'block';
+                    } else if(el.classList.contains('sub-menu-item')) {
+                        el.style.display = 'flex';
+                    } else {
+                        el.style.display = 'block';
+                    }
+                });
+            } else {
+                adminMenus.forEach(el => {
+                    if(el.classList.contains('menu-group')) {
+                        el.style.display = 'block';
+                    } else if(el.classList.contains('sub-menu-item')) {
+                        el.style.display = 'flex';
+                    } else {
+                        el.style.display = 'block';
+                    }
+                });
+                studentMenus.forEach(el => el.style.display = 'none');
+            }
+
+            // Auto open the current menu group based on URL
+            const currentPage = window.location.pathname.split('/').pop() || 'prototype_interactive_classroom.html';
+            const hash = window.location.hash.substring(1);
+            let activePageId = hash;
+            
+            if (!activePageId) {
+                if (currentPage.includes('modeling')) activePageId = 'page-modeling';
+                if (currentPage.includes('courseware')) activePageId = 'page-outline';
+                if (currentPage.includes('digital_classroom')) activePageId = 'page-video-editor';
+                if (currentPage.includes('course_review')) activePageId = 'page-review';
+                if (currentPage.includes('system_management')) activePageId = 'page-user-management';
+                if (currentPage.includes('interactive_classroom')) {
+                    activePageId = savedRole === 'admin' ? 'page-path-config' : 'page-dashboard';
+                }
+                if (currentPage.includes('ai_companion')) activePageId = 'page-ai-companion';
+            }
+            
+            document.querySelectorAll('.sub-menu-item').forEach(el => {
+                el.classList.remove('active');
+                const onclickStr = el.getAttribute('onclick') || '';
+                if (activePageId && onclickStr.includes(activePageId)) {
+                    el.classList.add('active');
+                    const group = el.closest('.menu-group');
+                    if (group) {
+                        group.classList.add('open');
+                        const title = group.querySelector('.menu-title');
+                        if (title) title.classList.add('active');
+                    }
+                }
+            });
+
+            if (typeof switchRole === 'function') {
+                switchRole(savedRole);
+            }
+        });
+
+        const originalSwitchRole = typeof switchRole === 'function' ? switchRole : null;
+        if (originalSwitchRole) {
+            window.switchRole = function(role) {
+                localStorage.setItem('currentRole', role);
+                originalSwitchRole(role);
+                
+                // Optional: If student role is selected on an admin page, redirect to student page
+                const path = window.location.pathname;
+                const isAdminPage = path.includes('modeling') || 
+                                    path.includes('courseware') || 
+                                    path.includes('digital_classroom') || 
+                                    path.includes('course_review') || 
+                                path.includes('system_management');
+                if (role === 'student' && isAdminPage) {
+                    window.location.href = 'prototype_interactive_classroom.html';
+                }
+            };
+        }
+    </script>
+</body>
+</html>
